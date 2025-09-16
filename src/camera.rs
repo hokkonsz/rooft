@@ -84,7 +84,7 @@ fn zoom(
         return;
     }
 
-    settings.orbit_distance = (settings.orbit_distance + mouse_wheel.delta.y * settings.zoom_step)
+    settings.orbit_distance = (settings.orbit_distance + mouse_wheel.delta.y * -settings.zoom_step)
         .clamp(settings.orbit_distance_min, settings.orbit_distance_max);
 
     camera.translation = Vec3::ZERO - camera.forward() * settings.orbit_distance;
