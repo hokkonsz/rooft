@@ -10,7 +10,7 @@ pub fn plugin(app: &mut App) {
         .add_systems(Update, (rotate, zoom));
 }
 
-fn setup(mut commands: Commands, mut ambient_light: ResMut<AmbientLight>) {
+fn setup(mut commands: Commands) {
     let translation = Vec3::new(5000., 20000.0, 5000.0);
 
     commands.spawn((
@@ -22,8 +22,6 @@ fn setup(mut commands: Commands, mut ambient_light: ResMut<AmbientLight>) {
         orbit_distance: translation.length(),
         ..Default::default()
     });
-
-    ambient_light.brightness = 500.;
 }
 
 #[derive(Debug, Resource)]

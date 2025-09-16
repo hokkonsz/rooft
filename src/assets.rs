@@ -2,12 +2,18 @@
 
 use bevy::prelude::*;
 
+use crate::materials::MatCap;
+
 pub fn plugin(app: &mut App) {
     app.init_resource::<AppAssets>()
         .add_systems(PreStartup, load_assets);
 }
 
-fn load_assets(asset_server: Res<AssetServer>, mut app_assets: ResMut<AppAssets>) {
+fn load_assets(
+    asset_server: Res<AssetServer>,
+    mut app_assets: ResMut<AppAssets>,
+    mut matcaps: ResMut<Assets<MatCap>>,
+) {
     app_assets.fonts.iosevka = IosevkaFont {
         regular: asset_server.load("fonts/Iosevka-Regular.ttf"),
         italic: asset_server.load("fonts/Iosevka-Italic.ttf"),
@@ -23,8 +29,15 @@ fn load_assets(asset_server: Res<AssetServer>, mut app_assets: ResMut<AppAssets>
         panel_show: asset_server.load("icons/panel_show.png"),
     };
 
-    app_assets.image = ImageAssets {
+    app_assets.images = ImageAssets {
         logo: asset_server.load("image/rooft.png"),
+    };
+
+    app_assets.materials.matcaps = MatCapAssets {
+        gray: matcaps.add(MatCap {
+            texture: asset_server.load("image/matcaps/gray.png"),
+            alpha_mode: AlphaMode::default(),
+        }),
     };
 }
 
@@ -32,7 +45,8 @@ fn load_assets(asset_server: Res<AssetServer>, mut app_assets: ResMut<AppAssets>
 pub struct AppAssets {
     pub fonts: FontsAssets,
     pub icons: IconsAssets,
-    pub image: ImageAssets,
+    pub images: ImageAssets,
+    pub materials: MaterialAssets,
 }
 
 #[derive(Default)]
@@ -60,4 +74,14 @@ pub struct IconsAssets {
 #[derive(Default)]
 pub struct ImageAssets {
     pub logo: Handle<Image>,
+}
+
+#[derive(Default)]
+pub struct MaterialAssets {
+    pub matcaps: MatCapAssets,
+}
+
+#[derive(Default)]
+pub struct MatCapAssets {
+    pub gray: Handle<MatCap>,
 }

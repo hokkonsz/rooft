@@ -2,6 +2,7 @@ mod assets;
 mod camera;
 mod color;
 mod core;
+mod materials;
 mod ui;
 
 use bevy::{
@@ -30,6 +31,7 @@ fn main() -> AppExit {
             ..default()
         }))
         .add_plugins(assets::plugin)
+        .add_plugins(materials::plugin)
         .add_plugins(core::plugin)
         .add_plugins(camera::plugin)
         .add_plugins(ui::plugin)
