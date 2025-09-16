@@ -1,11 +1,93 @@
-use bevy::prelude::*;
+use std::f32::consts::FRAC_PI_2;
+
+use bevy::{
+    input::mouse::{AccumulatedMouseMotion, AccumulatedMouseScroll},
+    prelude::*,
+};
 
 pub fn plugin(app: &mut App) {
-    app.add_systems(Startup, setup);
+    app.add_systems(Startup, setup)
+        .add_systems(Update, (rotate, zoom));
 }
 
-fn setup(mut commands: Commands) {
-    commands.spawn(Camera3d::default());
+fn setup(mut commands: Commands, mut ambient_light: ResMut<AmbientLight>) {
+    let translation = Vec3::new(5000., 20000.0, 5000.0);
+
+    commands.spawn((
+        Camera3d::default(),
+        Transform::from_translation(translation).looking_at(Vec3::ZERO, Vec3::Y),
+    ));
+
+    commands.insert_resource(CameraSettings {
+        orbit_distance: translation.length(),
+        ..Default::default()
+    });
+
+    ambient_light.brightness = 500.;
+}
+
+#[derive(Debug, Resource)]
+struct CameraSettings {
+    pub orbit_distance_min: f32,
+    pub orbit_distance_max: f32,
+    pub orbit_distance: f32,
+    pub zoom_step: f32,
+    pub pitch_limit: f32,
+    pub pitch_speed: f32,
+    pub yaw_speed: f32,
+}
+
+impl Default for CameraSettings {
+    fn default() -> Self {
+        Self {
+            orbit_distance_min: 0.,
+            orbit_distance_max: 30000.,
+            orbit_distance: 5000.,
+            zoom_step: 500.,
+            pitch_limit: FRAC_PI_2 - 0.01,
+            pitch_speed: 4.,
+            yaw_speed: 5.,
+        }
+    }
+}
+
+fn rotate(
+    mut camera: Single<&mut Transform, With<Camera>>,
+    settings: Res<CameraSettings>,
+    mouse_buttons: Res<ButtonInput<MouseButton>>,
+    mouse_motion: Res<AccumulatedMouseMotion>,
+    time: Res<Time>,
+) {
+    if !mouse_buttons.pressed(MouseButton::Middle) {
+        return;
+    }
+
+    let dt = time.delta_secs();
+
+    let delta_pitch = mouse_motion.delta.y * settings.pitch_speed * dt;
+    let delta_yaw = mouse_motion.delta.x * settings.yaw_speed * dt;
+
+    let (yaw, pitch, _) = camera.rotation.to_euler(EulerRot::YXZ);
+    let pitch = (pitch + delta_pitch).clamp(-settings.pitch_limit, settings.pitch_limit);
+    let yaw = yaw + delta_yaw;
+    camera.rotation = Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.);
+
+    camera.translation = Vec3::ZERO - camera.forward() * settings.orbit_distance;
+}
+
+fn zoom(
+    mut camera: Single<&mut Transform, With<Camera>>,
+    mut settings: ResMut<CameraSettings>,
+    mouse_wheel: Res<AccumulatedMouseScroll>,
+) {
+    if mouse_wheel.delta.y.abs() == 0.0 {
+        return;
+    }
+
+    settings.orbit_distance = (settings.orbit_distance + mouse_wheel.delta.y * settings.zoom_step)
+        .clamp(settings.orbit_distance_min, settings.orbit_distance_max);
+
+    camera.translation = Vec3::ZERO - camera.forward() * settings.orbit_distance;
 }
 
 // #[derive(Default)]
