@@ -64,8 +64,8 @@ fn rotate(
 
     let dt = time.delta_secs();
 
-    let delta_pitch = mouse_motion.delta.y * settings.pitch_speed * dt;
-    let delta_yaw = mouse_motion.delta.x * settings.yaw_speed * dt;
+    let delta_pitch = -mouse_motion.delta.y * settings.pitch_speed * dt;
+    let delta_yaw = -mouse_motion.delta.x * settings.yaw_speed * dt;
 
     let (yaw, pitch, _) = camera.rotation.to_euler(EulerRot::YXZ);
     let pitch = (pitch + delta_pitch).clamp(-settings.pitch_limit, settings.pitch_limit);
