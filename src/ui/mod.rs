@@ -39,20 +39,19 @@ pub fn plugin(app: &mut App) {
             Update,
             (
                 top_bar::move_window,
+                top_bar::toggle_left_panel,
                 top_bar::minimize,
                 top_bar::maximize,
                 top_bar::close,
             ),
         )
-        .add_systems(
-            Update,
-            (
-                left_panel::toggle, //..
-                left_panel::resize,
-                left_panel::update,
-            ),
-        )
-        .add_systems(Update, (actions::select, actions::toggle).chain());
+        .add_systems(Update, (left_panel::resize, left_panel::update))
+        .add_systems(Update, (actions::select, actions::toggle_panel).chain())
+        .add_observer(top_bar::on_resize_left_panel)
+        .add_observer(left_bar::on_show_left_panel)
+        .add_observer(left_bar::on_hide_left_panel)
+        .add_observer(left_panel::on_show)
+        .add_observer(left_panel::on_hide);
 }
 
 fn setup(mut commands: Commands, assets: Res<AppAssets>) {
@@ -93,7 +92,7 @@ fn setup(mut commands: Commands, assets: Res<AppAssets>) {
                     .with_children(|toggle_panel| {
                         toggle_panel
                             .spawn((
-                                ToggleLeftPanelButton,
+                                ToggleLeftPanelButton::Visible,
                                 Node {
                                     width: Val::Px(20.),
                                     height: Val::Px(20.),
@@ -119,7 +118,7 @@ fn setup(mut commands: Commands, assets: Res<AppAssets>) {
                                     flex_direction: FlexDirection::Row,
                                     ..default()
                                 },
-                                ImageNode::new(assets.icons.panel_hide.clone()),
+                                ImageNode::new(assets.icons.panel_visible.clone()),
                             ));
                     });
 

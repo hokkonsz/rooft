@@ -1,9 +1,13 @@
 use crate::{
     assets::AppAssets,
     color,
-    core::{ActionList, ElementList},
+    core::{
+        ActionList, Actions,
+        base::{OnResizeBase, OnSpawnBase},
+    },
     ui::{
-        BAR_SIZE, LIST_ELEM_BORDER, LIST_ELEM_HEIGHT, LIST_ELEM_MARGIN, bundles::list_elem,
+        BAR_SIZE, LIST_ELEM_BORDER, LIST_ELEM_HEIGHT, LIST_ELEM_MARGIN,
+        bundles::{elem_button, input_panel},
         left_panel::LeftPanel,
     },
 };
@@ -13,11 +17,7 @@ use bevy::prelude::*;
 #[derive(Component)]
 pub struct ActionsPanel;
 
-#[derive(Component)]
-#[require(Button)]
-pub struct ActionsButton;
-
-pub fn toggle(
+pub fn toggle_panel(
     mut commands: Commands,
     assets: Res<AppAssets>,
     mouse_input: Res<ButtonInput<MouseButton>>,
@@ -78,10 +78,10 @@ pub fn toggle(
                     ))
                     .with_children(|panel| {
                         for action in actions.list.iter() {
-                            panel.spawn(list_elem(
+                            panel.spawn(elem_button(
                                 action.to_string(),
-                                &assets.fonts.iosevka.regular,
-                                ActionsButton,
+                                assets.fonts.iosevka.regular.clone(),
+                                action.clone(),
                             ));
                         }
                     });
@@ -122,18 +122,50 @@ pub fn toggle(
     }
 }
 
+#[derive(Component)]
+struct Test1;
+
+#[derive(Component)]
+struct Test2;
+
 pub fn select(
     mut buttons: Query<
-        (&Interaction, &mut BackgroundColor, &mut BorderColor),
-        (Changed<Interaction>, With<ActionsButton>),
+        (
+            &Interaction,
+            &Actions,
+            &mut BackgroundColor,
+            &mut BorderColor,
+        ),
+        (Changed<Interaction>, With<Actions>),
     >,
-    mut elements: ResMut<ElementList>,
+    panel_node: Single<&Node, With<ActionsPanel>>,
+    mut commands: Commands,
+    assets: Res<AppAssets>,
 ) {
-    for (interact, mut bg, mut bc) in buttons.iter_mut() {
+    for (interact, actions, mut bg, mut bc) in buttons.iter_mut() {
         match interact {
-            Interaction::Pressed => elements
-                .list
-                .push((Entity::from_raw(777), Name::new("Element"))),
+            Interaction::Pressed => match actions {
+                Actions::AddBase => {
+                    commands.spawn(input_panel(
+                        panel_node.left,
+                        panel_node.top,
+                        "Add Base",
+                        assets.fonts.iosevka.regular.clone(),
+                        vec![(String::from("X"), 15000.), (String::from("Y"), 10000.)],
+                        Test1,
+                    ));
+                }
+                Actions::ResizeBaze => {
+                    commands.spawn(input_panel(
+                        panel_node.left,
+                        panel_node.top,
+                        "Resize Base",
+                        assets.fonts.iosevka.regular.clone(),
+                        vec![(String::from("X"), 5000.), (String::from("Y"), 10000.)],
+                        Test1,
+                    ));
+                }
+            },
             Interaction::Hovered => {
                 *bg = BackgroundColor(color::BLACK44);
                 *bc = BorderColor(color::BLACK44);

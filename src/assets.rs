@@ -25,8 +25,8 @@ fn load_assets(
         minimize: asset_server.load("icons/minimize.png"),
         maximize: asset_server.load("icons/maximize.png"),
         close: asset_server.load("icons/close.png"),
-        panel_hide: asset_server.load("icons/panel_hide.png"),
-        panel_show: asset_server.load("icons/panel_show.png"),
+        panel_hidden: asset_server.load("icons/panel_hidden.png"),
+        panel_visible: asset_server.load("icons/panel_visible.png"),
     };
 
     app_assets.images = ImageAssets {
@@ -67,8 +67,8 @@ pub struct IconsAssets {
     pub minimize: Handle<Image>,
     pub maximize: Handle<Image>,
     pub close: Handle<Image>,
-    pub panel_hide: Handle<Image>,
-    pub panel_show: Handle<Image>,
+    pub panel_hidden: Handle<Image>,
+    pub panel_visible: Handle<Image>,
 }
 
 #[derive(Default)]
