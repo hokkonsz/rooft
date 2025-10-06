@@ -38,6 +38,10 @@ fn load_assets(
             texture: asset_server.load("image/matcaps/gray.png"),
             alpha_mode: AlphaMode::default(),
         }),
+        blue: matcaps.add(MatCap {
+            texture: asset_server.load("image/matcaps/blue.png"),
+            alpha_mode: AlphaMode::default(),
+        }),
     };
 }
 
@@ -84,4 +88,5 @@ pub struct MaterialAssets {
 #[derive(Default)]
 pub struct MatCapAssets {
     pub gray: Handle<MatCap>,
+    pub blue: Handle<MatCap>,
 }
