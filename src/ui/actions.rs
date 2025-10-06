@@ -1,23 +1,82 @@
 use crate::{
     assets::AppAssets,
     color,
-    core::{
-        ActionList, Actions,
-        base::{OnResizeBase, OnSpawnBase},
-    },
+    core::actions::{ActionList, ActionState, Actions},
     ui::{
-        BAR_SIZE, LIST_ELEM_BORDER, LIST_ELEM_HEIGHT, LIST_ELEM_MARGIN,
-        bundles::{elem_button, input_panel},
+        BAR_SIZE, LIST_ELEM_BORDER, LIST_ELEM_HEIGHT, LIST_ELEM_MARGIN, bundles::elem_button,
         left_panel::LeftPanel,
     },
 };
 
 use bevy::prelude::*;
 
+pub fn plugin(app: &mut App) {
+    app.add_systems(Startup, setup)
+        .add_systems(OnEnter(ActionState::Wait), hide)
+        .add_systems(OnEnter(ActionState::Selector), display_selector)
+        .add_systems(Update, (select, toggle_panel).chain())
+        //..
+        ;
+}
+
+fn setup(mut commands: Commands) {
+    commands.spawn((
+        ActionsPanel,
+        Node {
+            width: Val::Px(10.),
+            height: Val::Px(10.),
+            box_sizing: BoxSizing::ContentBox,
+            border: UiRect::all(Val::Px(10.)),
+            position_type: PositionType::Absolute,
+            align_items: AlignItems::Center,
+            align_content: AlignContent::Center,
+            justify_items: JustifyItems::Start,
+            justify_content: JustifyContent::Start,
+            flex_direction: FlexDirection::Column,
+            ..default()
+        },
+        Visibility::Hidden,
+        BackgroundColor(color::BLACK34),
+        BorderColor(color::BLACK34),
+        BorderRadius::all(Val::Px(10.)),
+    ));
+}
+
+fn hide(mut panel_visibility: Single<&mut Visibility, With<ActionsPanel>>) {
+    **panel_visibility = Visibility::Hidden;
+}
+
+fn display_selector(
+    mut commands: Commands,
+    panel: Single<(Entity, &mut Node, &mut Visibility), With<ActionsPanel>>,
+    window: Single<&Window>,
+    assets: Res<AppAssets>,
+) {
+    let Some(cursor_position) = window.cursor_position() else {
+        return;
+    };
+
+    let (entity, mut node, mut visibility) = panel.into_inner();
+
+    commands.entity(entity).despawn_related::<Children>();
+
+    *visibility = Visibility::Visible;
+    node.left = Val::Px(cursor_position.x);
+    node.top = Val::Px(cursor_position.y);
+
+    commands.entity(entity).with_children(|panel| {
+        panel.spawn(elem_button(
+            "Resize Base",
+            assets.fonts.iosevka.regular.clone(),
+            Actions::ResizeBaze,
+        ));
+    });
+}
+
 #[derive(Component)]
 pub struct ActionsPanel;
 
-pub fn toggle_panel(
+fn toggle_panel(
     mut commands: Commands,
     assets: Res<AppAssets>,
     mouse_input: Res<ButtonInput<MouseButton>>,
@@ -122,13 +181,7 @@ pub fn toggle_panel(
     }
 }
 
-#[derive(Component)]
-struct Test1;
-
-#[derive(Component)]
-struct Test2;
-
-pub fn select(
+fn select(
     mut buttons: Query<
         (
             &Interaction,
@@ -141,39 +194,80 @@ pub fn select(
     panel_node: Single<&Node, With<ActionsPanel>>,
     mut commands: Commands,
     assets: Res<AppAssets>,
+    // mut controller: ResMut<ActionController>,
 ) {
-    for (interact, actions, mut bg, mut bc) in buttons.iter_mut() {
-        match interact {
-            Interaction::Pressed => match actions {
-                Actions::AddBase => {
-                    commands.spawn(input_panel(
-                        panel_node.left,
-                        panel_node.top,
-                        "Add Base",
-                        assets.fonts.iosevka.regular.clone(),
-                        vec![(String::from("X"), 15000.), (String::from("Y"), 10000.)],
-                        Test1,
-                    ));
-                }
-                Actions::ResizeBaze => {
-                    commands.spawn(input_panel(
-                        panel_node.left,
-                        panel_node.top,
-                        "Resize Base",
-                        assets.fonts.iosevka.regular.clone(),
-                        vec![(String::from("X"), 5000.), (String::from("Y"), 10000.)],
-                        Test1,
-                    ));
-                }
-            },
-            Interaction::Hovered => {
-                *bg = BackgroundColor(color::BLACK44);
-                *bc = BorderColor(color::BLACK44);
-            }
-            Interaction::None => {
-                *bg = BackgroundColor(color::BLACK30);
-                *bc = BorderColor(color::BLACK30);
-            }
+    // let Some(entity) = controller.id else {
+    //     return;
+    // };
+
+    // for (interact, actions, mut bg, mut bc) in buttons.iter_mut() {
+    //     button_interact(interact, &mut bg, &mut bc, || match actions {
+    //         Actions::AddBase => {
+    //             commands.entity(entity).despawn_related::<Children>();
+
+    //             // commands.entity(entity).add_children(|action_panel|
+    //             //     action_panel.spawn(
+    //             //     (
+    //             //     Node {
+    //             //         width: Val::Px(150.),
+    //             //         height: Val::Px(150.),
+    //             //         box_sizing: BoxSizing::ContentBox,
+    //             //         left,
+    //             //         top,
+    //             //         border: UiRect::all(Val::Px(10.)),
+    //             //         position_type: PositionType::Absolute,
+    //             //         align_items: AlignItems::Center,
+    //             //         align_content: AlignContent::Center,
+    //             //         justify_items: JustifyItems::Start,
+    //             //         justify_content: JustifyContent::Start,
+    //             //         flex_direction: FlexDirection::Column,
+    //             //         ..default()
+    //             //     },
+    //             //     BackgroundColor(color::BLACK34),
+    //             //     BorderColor(color::BLACK34),
+    //             //     BorderRadius::all(Val::Px(10.)),
+    //             // )));
+
+    //             // commands.();
+
+    //             // commands.spawn(input_panel(
+    //             //     panel_node.left,
+    //             //     panel_node.top,
+    //             //     "Add Base",
+    //             //     assets.fonts.iosevka.regular.clone(),
+    //             //     vec![(String::from("X"), 15000.), (String::from("Y"), 10000.)],
+    //             //     Test1,
+    //             // ));
+    //         }
+    //         Actions::ResizeBaze => {
+    //             commands.spawn(input_panel(
+    //                 panel_node.left,
+    //                 panel_node.top,
+    //                 "Resize Base",
+    //                 assets.fonts.iosevka.regular.clone(),
+    //                 vec![(String::from("X"), 5000.), (String::from("Y"), 10000.)],
+    //                 Test1,
+    //             ));
+    //         }
+    //     });
+    // }
+}
+
+fn button_interact(
+    interact: &Interaction,
+    background_color: &mut BackgroundColor,
+    border_color: &mut BorderColor,
+    on_press: impl FnOnce() -> (),
+) {
+    match interact {
+        Interaction::Pressed => on_press(),
+        Interaction::Hovered => {
+            *background_color = BackgroundColor(color::BLACK44);
+            *border_color = BorderColor(color::BLACK44);
+        }
+        Interaction::None => {
+            *background_color = BackgroundColor(color::BLACK30);
+            *border_color = BorderColor(color::BLACK30);
         }
     }
 }

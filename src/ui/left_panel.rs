@@ -1,12 +1,77 @@
-use crate::assets::AppAssets;
-use crate::color;
-use crate::core::ElementList;
-use crate::ui::bundles::elem_button;
-use crate::ui::{BAR_SIZE, PANEL_WIDTH};
 use bevy::prelude::*;
+
+use crate::{
+    assets::AppAssets,
+    color,
+    core::ElementList,
+    ui::{BAR_SIZE, bundles::elem_button},
+};
+
+pub fn plugin(app: &mut App) {
+    app.add_systems(Startup, setup)
+        .add_systems(Update, (resize, update))
+        .add_observer(on_show)
+        .add_observer(on_hide)
+        //..
+        ;
+}
+
+fn setup(mut commands: Commands) {
+    commands
+        .spawn((
+            LeftPanel,
+            Node {
+                width: Val::Px(LeftPanel::WIDTH),
+                height: Val::Percent(100.),
+                top: Val::Px(BAR_SIZE),
+                left: Val::Px(BAR_SIZE),
+                align_items: AlignItems::Start,
+                justify_content: JustifyContent::Start,
+                flex_direction: FlexDirection::Row,
+                border: UiRect::left(Val::Px(2.)),
+                flex_shrink: 0.,
+                ..default()
+            },
+            BackgroundColor(color::BLACK34),
+            BorderColor(color::BLACK30),
+        ))
+        .with_children(|left_panel| {
+            left_panel.spawn((
+                LeftPanelList,
+                Node {
+                    width: Val::Percent(100.),
+                    height: Val::Percent(100.),
+                    padding: UiRect::horizontal(Val::Px(10.)),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Start,
+                    flex_direction: FlexDirection::Column,
+                    ..default()
+                },
+                BackgroundColor(color::BLACK34),
+            ));
+
+            left_panel.spawn((
+                LeftPanelHandle,
+                Node {
+                    width: Val::Px(LeftPanel::HANDLE_WIDTH),
+                    height: Val::Percent(100.),
+                    align_items: AlignItems::Start,
+                    justify_content: JustifyContent::Start,
+                    flex_direction: FlexDirection::Column,
+                    ..default()
+                },
+                BackgroundColor(color::BLACK34),
+            ));
+        });
+}
 
 #[derive(Component)]
 pub struct LeftPanel;
+
+impl LeftPanel {
+    pub const WIDTH: f32 = 250.;
+    pub const HANDLE_WIDTH: f32 = 4.;
+}
 
 #[derive(Component)]
 pub struct LeftPanelList;
@@ -24,7 +89,7 @@ pub struct OnHideLeftPanel;
 #[derive(Event)]
 pub struct OnResizeLeftPanel(pub f32);
 
-pub fn on_show(
+fn on_show(
     _trigger: Trigger<OnShowLeftPanel>,
     panel: Single<(&Node, &mut Visibility), With<LeftPanel>>,
     mut commands: Commands,
@@ -38,7 +103,7 @@ pub fn on_show(
     }
 }
 
-pub fn on_hide(
+fn on_hide(
     _trigger: Trigger<OnHideLeftPanel>,
     mut visibility: Single<&mut Visibility, With<LeftPanel>>,
     mut commands: Commands,
@@ -48,7 +113,7 @@ pub fn on_hide(
     commands.trigger(OnResizeLeftPanel(0.));
 }
 
-pub fn resize(
+fn resize(
     window: Single<&mut Window>,
     panel_handle: Single<(&Interaction, &mut BackgroundColor), With<LeftPanelHandle>>,
     mut panel_node: Single<&mut Node, With<LeftPanel>>,
@@ -63,7 +128,9 @@ pub fn resize(
                 return;
             };
 
-            let new_width = (cursor_pos.x - BAR_SIZE).clamp(PANEL_WIDTH * 0.5, PANEL_WIDTH * 2.);
+            let new_width = (cursor_pos.x - BAR_SIZE)
+                .clamp(LeftPanel::WIDTH * 0.5, LeftPanel::WIDTH * 2.)
+                + LeftPanel::HANDLE_WIDTH;
 
             panel_node.width = Val::Px(new_width);
             commands.trigger(OnResizeLeftPanel(new_width));
@@ -81,7 +148,7 @@ pub fn resize(
 #[require(Button)]
 struct PanelElemButton;
 
-pub fn update(
+fn update(
     elements: Res<ElementList>,
     assets: Res<AppAssets>,
     panel_entity: Single<Entity, With<LeftPanelList>>,

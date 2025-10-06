@@ -4,7 +4,13 @@ use bevy::{
     render::mesh::{Indices, PrimitiveTopology, VertexAttributeValues},
 };
 
-use crate::assets::AppAssets;
+use crate::{
+    assets::AppAssets,
+    core::{
+        ElementList,
+        actions::{ActionList, Actions},
+    },
+};
 
 #[derive(Component)]
 pub struct Base;
@@ -16,8 +22,8 @@ pub fn on_spawn_base(
     trigger: Trigger<OnSpawnBase>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
-    mut elements: ResMut<super::ElementList>,
-    mut actions: ResMut<super::ActionList>,
+    mut elements: ResMut<ElementList>,
+    mut actions: ResMut<ActionList>,
     assets: Res<AppAssets>,
 ) {
     info!(
@@ -38,9 +44,23 @@ pub fn on_spawn_base(
     commands.entity(id).insert(Name::from(name.clone()));
     elements.list.push((id, name));
 
-    *actions = super::ActionList {
-        list: vec![super::Actions::ResizeBaze],
+    *actions = ActionList {
+        list: vec![Actions::ResizeBaze],
     };
+}
+
+pub fn test_spawn(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    assets: Res<AppAssets>,
+) {
+    commands.spawn((
+        Base,
+        // PICKABLE,
+        Mesh3d(meshes.add(create_mesh(Vec2::new(15000., 10000.)))),
+        MeshMaterial3d(assets.materials.matcaps.gray.clone()),
+        Transform::from_xyz(0.0, 150., 0.0),
+    ));
 }
 
 #[derive(Event)]
