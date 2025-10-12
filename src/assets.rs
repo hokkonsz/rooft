@@ -31,6 +31,9 @@ fn load_assets(
 
     app_assets.images = ImageAssets {
         logo: asset_server.load("image/rooft.png"),
+        shape_l: asset_server.load("image/shape_l.png"),
+        shape_n: asset_server.load("image/shape_n.png"),
+        shape_rect: asset_server.load("image/shape_rect.png"),
     };
 
     app_assets.materials.matcaps = MatCapAssets {
@@ -78,6 +81,9 @@ pub struct IconsAssets {
 #[derive(Default)]
 pub struct ImageAssets {
     pub logo: Handle<Image>,
+    pub shape_l: Handle<Image>,
+    pub shape_n: Handle<Image>,
+    pub shape_rect: Handle<Image>,
 }
 
 #[derive(Default)]

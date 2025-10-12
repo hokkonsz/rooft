@@ -3,6 +3,7 @@ mod bundles;
 mod left_bar;
 mod left_panel;
 mod top_bar;
+mod utils;
 
 use bevy::prelude::*;
 use bevy_ui_text_input::TextInputPlugin;

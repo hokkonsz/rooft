@@ -1,62 +1,64 @@
+use std::collections::VecDeque;
+
 use bevy::prelude::*;
 
 pub fn plugin(app: &mut App) {
     app.init_state::<ActionState>()
         .add_systems(Startup, setup)
-		.add_systems(Update, wait.run_if(in_state(ActionState::Wait)))
-        // .insert_resource(MeshPickingSettings{require_markers: false, ray_cast_visibility: RayCastVisibility::Any})
-		// .add_systems(OnEnter(Selector), selector)
+		.add_systems(Update, update)
 		// ..
 		;
 }
 
-pub fn setup(mut commands: Commands) {
-    commands.insert_resource(ActionList {
-        list: vec![Actions::AddBase],
-    });
+fn setup(mut commands: Commands) {
+    let mut que = ActionQue::new();
+
+    que.add(ActionState::ReshapeBase);
+    que.add(ActionState::ResizeBase);
+
+    commands.insert_resource(que);
 }
 
 #[derive(Default, Resource)]
-pub struct ActionList {
-    pub list: Vec<Actions>,
+pub struct ActionQue {
+    que: VecDeque<ActionState>,
 }
 
-fn wait(
-    mut commands: Commands,
-    mouse_input: Res<ButtonInput<MouseButton>>,
-    window: Single<&Window>,
-) {
+impl ActionQue {
+    fn new() -> Self {
+        Self {
+            que: VecDeque::new(),
+        }
+    }
+
+    pub fn next(&mut self) {
+        let _ = self.que.pop_back();
+    }
+
+    pub fn add(&mut self, state: ActionState) {
+        self.que.push_front(state);
+    }
+}
+
+fn update(action_que: Res<ActionQue>, mut next_state: ResMut<NextState<ActionState>>) {
+    if !action_que.is_changed() {
+        return;
+    }
+
+    if let Some(action_state) = action_que.que.back() {
+        info!("New State: {action_state:?}");
+        next_state.set(*action_state);
+    } else {
+        info!("New State: None");
+        next_state.set(ActionState::None);
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default, States)]
 pub enum ActionState {
-    // Waiting For Valid Input
     #[default]
-    Wait,
+    None,
 
-    // Action Selector
-    Selector,
-
-    // Actions
+    ReshapeBase,
     ResizeBase,
-    Reset,
-
-    // Results
-    Success,
-    Canceled,
-}
-
-#[derive(Component, Clone)]
-pub enum Actions {
-    AddBase,
-    ResizeBaze,
-}
-
-impl std::fmt::Display for Actions {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Actions::AddBase => write!(f, "Add Base"),
-            Actions::ResizeBaze => write!(f, "Resize Base"),
-        }
-    }
 }

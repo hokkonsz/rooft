@@ -3,7 +3,7 @@ use crate::{
     color,
     ui::{
         BAR_SIZE,
-        bundles::bar_button,
+        bundles::button_bar,
         left_panel::{LeftPanel, OnHideLeftPanel, OnResizeLeftPanel, OnShowLeftPanel},
     },
 };
@@ -163,6 +163,7 @@ fn setup(mut commands: Commands, assets: Res<AppAssets>) {
                             font_size: 12.,
                             ..default()
                         },
+                        TextColor(color::WHITE200),
                     ));
 
                     // Right Curve
@@ -210,13 +211,13 @@ fn setup(mut commands: Commands, assets: Res<AppAssets>) {
                 })
                 .with_children(|control_buttons| {
                     // Minimize
-                    control_buttons.spawn(bar_button(&assets.icons.minimize, 15., MinimizeButton));
+                    control_buttons.spawn(button_bar(&assets.icons.minimize, 15., MinimizeButton));
 
                     // Maximize
-                    control_buttons.spawn(bar_button(&assets.icons.maximize, 15., MaximizeButton));
+                    control_buttons.spawn(button_bar(&assets.icons.maximize, 15., MaximizeButton));
 
                     // Close
-                    control_buttons.spawn(bar_button(&assets.icons.close, 15., CloseButton));
+                    control_buttons.spawn(button_bar(&assets.icons.close, 15., CloseButton));
                 });
         });
 }
@@ -232,7 +233,7 @@ pub enum ToggleLeftPanelButton {
 #[derive(Component)]
 pub struct ToggleLeftPanelIcon;
 
-pub fn toggle_left_panel(
+fn toggle_left_panel(
     button: Single<
         (
             &Interaction,
@@ -289,7 +290,7 @@ impl Tab {
 #[derive(Component)]
 pub struct TabName;
 
-pub fn on_resize_left_panel(
+fn on_resize_left_panel(
     trigger: Trigger<OnResizeLeftPanel>,
     mut tab: Single<&mut Node, With<Tab>>,
 ) {
@@ -300,7 +301,7 @@ pub fn on_resize_left_panel(
 #[require(Button)]
 pub struct MinimizeButton;
 
-pub fn minimize(
+fn minimize(
     button: Single<
         (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<MinimizeButton>),
@@ -327,7 +328,7 @@ pub fn minimize(
 #[require(Button)]
 pub struct MaximizeButton;
 
-pub fn maximize(
+fn maximize(
     button: Single<
         (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<MaximizeButton>),
@@ -359,7 +360,7 @@ pub fn maximize(
 #[require(Button)]
 pub struct CloseButton;
 
-pub fn close(
+fn close(
     button: Single<(&Interaction, &mut BackgroundColor), (Changed<Interaction>, With<CloseButton>)>,
     mut app_exit_events: ResMut<Events<bevy::app::AppExit>>,
 ) {
@@ -379,7 +380,7 @@ pub fn close(
     }
 }
 
-pub fn move_window(input: Res<ButtonInput<MouseButton>>, window: Single<&mut Window>) {
+fn move_window(input: Res<ButtonInput<MouseButton>>, window: Single<&mut Window>) {
     if input.just_pressed(MouseButton::Left) {
         let Some(cursor_pos) = window.cursor_position() else {
             return;

@@ -4,102 +4,65 @@ use bevy::{
     render::mesh::{Indices, PrimitiveTopology, VertexAttributeValues},
 };
 
-use crate::{
-    assets::AppAssets,
-    core::{
-        ElementList,
-        actions::{ActionList, Actions},
-    },
-};
+use crate::{assets::AppAssets, core::ElementList};
 
 #[derive(Component)]
 pub struct Base;
 
+#[derive(Component, Clone, Copy)]
+pub enum BaseShape {
+    Rectangle,
+    L,
+    N,
+}
+
+impl BaseShape {
+    pub fn name(&self) -> String {
+        match self {
+            BaseShape::Rectangle => String::from("Base Rectangle"),
+            BaseShape::L => String::from("Base L"),
+            BaseShape::N => String::from("Base N"),
+        }
+    }
+}
+
 #[derive(Event)]
-pub struct OnSpawnBase(pub Vec2);
+pub struct OnReshapeBase(pub BaseShape);
 
 pub fn on_spawn_base(
-    trigger: Trigger<OnSpawnBase>,
+    trigger: Trigger<OnReshapeBase>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
     mut elements: ResMut<ElementList>,
-    mut actions: ResMut<ActionList>,
     assets: Res<AppAssets>,
 ) {
-    info!(
-        target = ?trigger.target(),
-        "on_spawn_base",
-    );
-
     let id = commands
         .spawn((
             Base,
-            Mesh3d(meshes.add(create_mesh(trigger.0))),
+            Mesh3d(meshes.add(create_base_mesh(trigger.0))),
             MeshMaterial3d(assets.materials.matcaps.gray.clone()),
             Transform::from_xyz(0.0, 150., 0.0),
         ))
         .id();
 
-    let name = format!("Base {}", id.index());
+    let name = format!("{} {}", trigger.0.name(), id.index());
     commands.entity(id).insert(Name::from(name.clone()));
+
     elements.list.push((id, name));
-
-    *actions = ActionList {
-        list: vec![Actions::ResizeBaze],
-    };
 }
 
-pub fn test_spawn(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    assets: Res<AppAssets>,
-) {
-    commands.spawn((
-        Base,
-        // PICKABLE,
-        Mesh3d(meshes.add(create_mesh(Vec2::new(15000., 10000.)))),
-        MeshMaterial3d(assets.materials.matcaps.gray.clone()),
-        Transform::from_xyz(0.0, 150., 0.0),
-    ));
-}
-
-#[derive(Event)]
-pub struct OnResizeBase(pub Vec2);
-
-pub fn on_resize_base(
-    trigger: Trigger<OnResizeBase>,
-    base: Single<&Mesh3d, With<Base>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-) {
-    info!(
-        target = ?trigger.target(),
-        "on_resize_base",
-    );
-
-    let Some(mesh) = meshes.get_mut(*base) else {
-        return;
-    };
-
-    // Calculate half size (mm)
-    let size = trigger.0 * 0.5;
-
-    if let Some(VertexAttributeValues::Float32x3(positions)) =
-        mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION)
-    {
-        for position in positions.iter_mut() {
-            *position = [
-                position[0].signum() * size.x,
-                position[1],
-                position[2].signum() * size.y,
-            ];
-        }
+fn create_base_mesh(shape: BaseShape) -> Mesh {
+    match shape {
+        BaseShape::Rectangle => base_rectangle(),
+        BaseShape::L => base_l(),
+        BaseShape::N => base_n(),
     }
 }
 
-fn create_mesh(size: Vec2) -> Mesh {
+fn base_rectangle() -> Mesh {
     // Calculate half size (mm)
-    let size = size * 0.5;
     let height = 150.;
+    let size = Vec2::new(15000., 10000.) * 0.5;
 
     // Keep the mesh data accessible in future frames to be able to mutate it in toggle_texture.
     Mesh::new(
@@ -188,4 +151,46 @@ fn create_mesh(size: Vec2) -> Mesh {
         16, 19, 17, 17, 19, 18, // back (+z)
         20, 21, 23, 21, 22, 23, // forward (-z)
     ]))
+}
+
+fn base_l() -> Mesh {
+    todo!()
+}
+
+fn base_n() -> Mesh {
+    todo!()
+}
+
+#[derive(Event)]
+pub struct OnResizeBase(pub Vec2);
+
+impl From<[f32; 2]> for OnResizeBase {
+    fn from(a: [f32; 2]) -> Self {
+        Self(Vec2::new(a[0], a[1]))
+    }
+}
+
+pub fn on_resize_base(
+    trigger: Trigger<OnResizeBase>,
+    base: Single<&Mesh3d, With<Base>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+) {
+    let Some(mesh) = meshes.get_mut(*base) else {
+        return;
+    };
+
+    // Calculate half size (mm)
+    let size = trigger.0 * 0.5;
+
+    if let Some(VertexAttributeValues::Float32x3(positions)) =
+        mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION)
+    {
+        for position in positions.iter_mut() {
+            *position = [
+                position[0].signum() * size.x,
+                position[1],
+                position[2].signum() * size.y,
+            ];
+        }
+    }
 }
