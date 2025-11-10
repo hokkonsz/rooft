@@ -830,20 +830,6 @@ impl<P: PrevMove> BaseBuilder<Polygon<P>> {
             mesh_indices.add_bottom_triangle(start, start_prev_i, start_next_i);
         }
 
-        if convex_turn == Turn::Clockwise {
-            info!(
-                "Base mesh is built in clockwise order, with {} nodes.",
-                nodes_len
-            )
-        } else {
-            info!(
-                "Base mesh is built in counter clockwise order, with {} nodes.",
-                nodes_len
-            )
-        }
-
-        println!("TEst2: {}, {}", mesh_indices.0.len(), mesh_vertices.len());
-
         Base {
             nodes: self.geometry.nodes,
             convex_turn,
