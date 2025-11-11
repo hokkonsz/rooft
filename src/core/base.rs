@@ -243,22 +243,65 @@ impl BaseMeshNormals {
         Self(Vec::with_capacity(capacity))
     }
 
-    // const NORMAL_X_POS: [f32; 3] = [1., 0., 0.];
-    // const NORMAL_X_NEG: [f32; 3] = [-1., 0., 0.];
-    // const NORMAL_Y_POS: [f32; 3] = [0., 1., 0.];
-    // const NORMAL_Y_NEG: [f32; 3] = [0., -1., 0.];
-    // const NORMAL_Z_POS: [f32; 3] = [0., 0., 1.];
-    // const NORMAL_Z_NEG: [f32; 3] = [0., 0., -1.];
+    fn add_from_positions(
+        &mut self,
+        position0: Position,
+        position1: Position,
+        position2: Position,
+    ) {
+        let v_01 = position1 - position0;
+        let normal_a = if v_01.x == 0. {
+            [v_01.z.signum() * 1., 0., 0.]
+        } else {
+            [0., 0., v_01.x.signum() * 1.]
+        };
+
+        let v_12 = position2 - position1;
+        let normal_b = if v_12.x == 0. {
+            [v_12.z.signum() * 1., 0., 0.]
+        } else {
+            [0., 0., v_12.x.signum() * 1.]
+        };
+
+        self.0.extend_from_slice(&[
+            [0., 1., 0.],  // top
+            normal_a,      // top side a
+            normal_b,      // top side b
+            normal_a,      // bottom side a
+            normal_b,      // bottom side b
+            [0., -1., 0.], // bottom
+        ]);
+    }
 }
 
+/// Holds the indices of the base mesh, the top and bottom face each has
+/// node count - 2 of triangles. While each side built by a triangle pair.
+///
+/// The associated offset constants helps indentify the vertex indices,
+/// see the figure below which depicts 2 neighbouring sides.
+/// (Also includes offset of the top vertex which is 0)
+///
+/// ```text
+///     
+///        TOP
+///         0
+///    -----+-----    
+///        2|1
+///      B  |  A    
+///        3|4
+///    -----+-----
+///         5
+///      BOTTOM
+///
+/// ```
 struct BaseMeshIndices(Vec<u32>);
 
 impl BaseMeshIndices {
-    const OFFSET_TOP_SIDE1: u32 = 1;
-    const OFFSET_TOP_SIDE2: u32 = 2;
-    const OFFSET_BOTTOM: u32 = 3;
-    const OFFSET_BOTTOM_SIDE1: u32 = 4;
-    const OFFSET_BOTTOM_SIDE2: u32 = 5;
+    const OFFSET_TOP_SIDE_A: u32 = 1;
+    const OFFSET_TOP_SIDE_B: u32 = 2;
+    const OFFSET_BOTTOM_SIDE_A: u32 = 3;
+    const OFFSET_BOTTOM_SIDE_B: u32 = 4;
+    const OFFSET_BOTTOM: u32 = 5;
 
     fn with_capacity(capacity: usize) -> Self {
         Self(Vec::with_capacity(capacity))
@@ -280,19 +323,14 @@ impl BaseMeshIndices {
         ]);
     }
 
-    fn add_side1_triangle(&mut self, index0: usize, index1: usize, index2: usize) {
+    fn add_side_triangle_pair(&mut self, index0: usize, index1: usize) {
         self.0.extend_from_slice(&[
-            index0 as u32 * VERTEX_PER_NODE + Self::OFFSET_TOP_SIDE1,
-            index1 as u32 * VERTEX_PER_NODE + Self::OFFSET_TOP_SIDE1,
-            index2 as u32 * VERTEX_PER_NODE + Self::OFFSET_BOTTOM_SIDE1,
-        ]);
-    }
-
-    fn add_side2_triangle(&mut self, index0: usize, index1: usize, index2: usize) {
-        self.0.extend_from_slice(&[
-            index0 as u32 * VERTEX_PER_NODE + Self::OFFSET_TOP_SIDE2,
-            index1 as u32 * VERTEX_PER_NODE + Self::OFFSET_BOTTOM_SIDE2,
-            index2 as u32 * VERTEX_PER_NODE + Self::OFFSET_BOTTOM_SIDE2,
+            index0 as u32 * VERTEX_PER_NODE + Self::OFFSET_BOTTOM_SIDE_A,
+            index0 as u32 * VERTEX_PER_NODE + Self::OFFSET_TOP_SIDE_A,
+            index1 as u32 * VERTEX_PER_NODE + Self::OFFSET_BOTTOM_SIDE_B,
+            index0 as u32 * VERTEX_PER_NODE + Self::OFFSET_TOP_SIDE_A,
+            index1 as u32 * VERTEX_PER_NODE + Self::OFFSET_TOP_SIDE_B,
+            index1 as u32 * VERTEX_PER_NODE + Self::OFFSET_BOTTOM_SIDE_B,
         ]);
     }
 }
@@ -680,8 +718,7 @@ impl<P: PrevMove> BaseBuilder<Polygon<P>> {
         let mut nodes_temp = NodeList(self.geometry.nodes.clone());
 
         let mut mesh_vertices = Vec::with_capacity(nodes_len * VERTEX_PER_NODE as usize);
-        // TODO! Add mesh normals
-        // let mut mesh_normals: BaseMeshNormals::with_capacity(nodes_len * VERTEX_PER_NODE as usize);
+        let mut mesh_normals = BaseMeshNormals::with_capacity(nodes_len * VERTEX_PER_NODE as usize);
         let mut mesh_indices = BaseMeshIndices::with_capacity(
             2 * (nodes_len - 2) * INDEX_PER_TRIANGLE // top + bottom
             + 2 * nodes_len * INDEX_PER_TRIANGLE, // sides
@@ -701,35 +738,44 @@ impl<P: PrevMove> BaseBuilder<Polygon<P>> {
                 (Turn::CounterClockwise, self.geometry.ccw_list)
             };
 
-        // Each node point represent 6 vertex
-        // Top (Y+) vertices building up 3 triangles (top + 2 side)
-        // Bottom (Y-) vertices building up 3 triangles (bottom + 2 side)
+        // Each node point represent 8 vertex
+        // Top (Y+) vertices building up 4 triangles (top + 3 side)
+        // Bottom (Y-) vertices building up 4 triangles (bottom + 3 side)
         for (
             curr_i,
             Node {
                 position: Position { x, z },
-                connection: Connection { next, .. },
+                connection,
                 ..
             },
         ) in self.geometry.nodes.iter().enumerate()
         {
             mesh_vertices.extend_from_slice(&[
                 [*x, y, *z],  // top
-                [*x, y, *z],  // top side 1
-                [*x, y, *z],  // top side 2
+                [*x, y, *z],  // top side a
+                [*x, y, *z],  // top side b
+                [*x, -y, *z], // bottom side a
+                [*x, -y, *z], // bottom side b
                 [*x, -y, *z], // bottom
-                [*x, -y, *z], // bottom side 1
-                [*x, -y, *z], // bottom side 2
             ]);
 
-            let next_i = *next;
+            let prev_i = connection.prev;
+            let next_i = connection.next;
 
             if convex_turn == Turn::Clockwise {
-                mesh_indices.add_side1_triangle(curr_i, next_i, next_i);
-                mesh_indices.add_side2_triangle(curr_i, next_i, curr_i);
+                mesh_indices.add_side_triangle_pair(curr_i, next_i);
+                mesh_normals.add_from_positions(
+                    nodes_temp[next_i].position,
+                    nodes_temp[curr_i].position,
+                    nodes_temp[prev_i].position,
+                );
             } else {
-                mesh_indices.add_side1_triangle(next_i, curr_i, next_i);
-                mesh_indices.add_side2_triangle(curr_i, curr_i, next_i);
+                mesh_indices.add_side_triangle_pair(next_i, curr_i);
+                mesh_normals.add_from_positions(
+                    nodes_temp[prev_i].position,
+                    nodes_temp[curr_i].position,
+                    nodes_temp[next_i].position,
+                );
             }
         }
 
@@ -838,6 +884,7 @@ impl<P: PrevMove> BaseBuilder<Polygon<P>> {
                 RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
             )
             .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, mesh_vertices)
+            .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_normals.0)
             .with_inserted_indices(Indices::U32(mesh_indices.0)),
         }
     }
@@ -845,7 +892,7 @@ impl<P: PrevMove> BaseBuilder<Polygon<P>> {
 
 /// Describes the [Node]'s connection turn
 ///
-/// ```
+/// ```text
 /// Clockwise        Counter Clockwise
 /// (Right)          (Left)
 ///
