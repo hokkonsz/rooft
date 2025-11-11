@@ -236,13 +236,23 @@ const fn min_distance(distance: f32) -> f32 {
     }
 }
 
+/// Holds the normals of the base mesh, each node has 6 vertex and each of
+/// these vertices has its own normal.
+///
+/// See [BaseMeshIndices] to for more information about the order of normals.
 struct BaseMeshNormals(Vec<[f32; 3]>);
 
 impl BaseMeshNormals {
+    /// Creates a new [BaseMeshNormals] with the given capacity
     fn with_capacity(capacity: usize) -> Self {
         Self(Vec::with_capacity(capacity))
     }
 
+    /// Calculates and adds the calculated normals to its inner vector
+    ///
+    /// The given positions are from 3 connected nodes
+    /// either in left to right (prev - current - next)
+    /// or in right to left (next -  current - prev) order.
     fn add_from_positions(
         &mut self,
         position0: Position,
@@ -303,10 +313,14 @@ impl BaseMeshIndices {
     const OFFSET_BOTTOM_SIDE_B: u32 = 4;
     const OFFSET_BOTTOM: u32 = 5;
 
+    /// Creates a new [BaseMeshIndices] with the given capacity
     fn with_capacity(capacity: usize) -> Self {
         Self(Vec::with_capacity(capacity))
     }
 
+    /// Calculates and adds the top triangle based on the given indices
+    ///
+    /// index0, index1, index2 are the indices of 3 nodes
     fn add_top_triangle(&mut self, index0: usize, index1: usize, index2: usize) {
         self.0.extend_from_slice(&[
             index0 as u32 * VERTEX_PER_NODE,
@@ -315,6 +329,9 @@ impl BaseMeshIndices {
         ]);
     }
 
+    /// Calculates and adds the bottom triangle based on the given indices
+    ///
+    /// index0, index1, index2 are the indices of 3 nodes
     fn add_bottom_triangle(&mut self, index0: usize, index1: usize, index2: usize) {
         self.0.extend_from_slice(&[
             index0 as u32 * VERTEX_PER_NODE + Self::OFFSET_BOTTOM,
@@ -323,6 +340,9 @@ impl BaseMeshIndices {
         ]);
     }
 
+    /// Calculates and adds the bottom triangle based on the given indices
+    ///
+    /// index0, index1 are the indices of 2 connected nodes
     fn add_side_triangle_pair(&mut self, index0: usize, index1: usize) {
         self.0.extend_from_slice(&[
             index0 as u32 * VERTEX_PER_NODE + Self::OFFSET_BOTTOM_SIDE_A,
@@ -348,6 +368,18 @@ impl Base {
     }
 }
 
+/// Describes the geometry state of the base builder
+///
+/// Geometry   | Node count
+/// ---------- | -----------
+/// [Empty]    | 0
+/// [Point]    | 1
+/// [Line]     | 2
+/// [Triangle] | 3
+/// [Polygon]  | >=4
+///
+/// The [Geometry] traits helps to type safely build a base with only
+/// 90 degree angles
 trait Geometry {}
 
 struct BaseBuilder<G: Geometry> {
@@ -359,6 +391,7 @@ struct Empty;
 impl Geometry for Empty {}
 
 impl BaseBuilder<Empty> {
+    /// Adds the starting [Node] to the base builder
     fn start_point(self, x: f32, z: f32) -> BaseBuilder<Point> {
         BaseBuilder {
             geometry: Point {
@@ -375,6 +408,11 @@ struct Point {
 impl Geometry for Point {}
 
 impl BaseBuilder<Point> {
+    /// Places a new [Node] at the given x, but with the previous [Node]'s z value.
+    ///
+    /// There is a minimum distance [MIN_DISTANCE], if the new position is
+    /// below this value, the new point will be moved further away to reach
+    /// the minimum distance
     fn move_x_to(self, x: f32) -> BaseBuilder<Line<X>> {
         let x = self.geometry.node.x + min_distance(x - self.geometry.node.x);
         let z = self.geometry.node.z;
@@ -384,6 +422,12 @@ impl BaseBuilder<Point> {
         }
     }
 
+    /// Places a new [Node] moving in x direction with the given distance, but
+    /// with the previous [Node]'s z value.
+    ///
+    /// There is a minimum distance [MIN_DISTANCE], if the new position is
+    /// below this value, the new point will be moved further away to reach
+    /// the minimum distance
     fn move_x_with(self, distance: f32) -> BaseBuilder<Line<X>> {
         let x = self.geometry.node.x + min_distance(distance);
         let z = self.geometry.node.z;
@@ -393,6 +437,11 @@ impl BaseBuilder<Point> {
         }
     }
 
+    /// Places a new [Node] at the given z, but with the previous [Node]'s x value.
+    ///
+    /// There is a minimum distance [MIN_DISTANCE], if the new position is
+    /// below this value, the new point will be moved further away to reach
+    /// the minimum distance
     fn move_z_to(self, z: f32) -> BaseBuilder<Line<Z>> {
         let x = self.geometry.node.x;
         let z = self.geometry.node.z + min_distance(z - self.geometry.node.z);
@@ -402,6 +451,12 @@ impl BaseBuilder<Point> {
         }
     }
 
+    /// Places a new [Node] moving in z direction with the given distance, but
+    /// with the previous [Node]'s x value.
+    ///
+    /// There is a minimum distance [MIN_DISTANCE], if the new position is
+    /// below this value, the new point will be moved further away to reach
+    /// the minimum distance
     fn move_z_with(self, distance: f32) -> BaseBuilder<Line<Z>> {
         let x = self.geometry.node.x;
         let z = self.geometry.node.z + min_distance(distance);
@@ -412,6 +467,8 @@ impl BaseBuilder<Point> {
     }
 }
 
+/// Each [Geometry] after [Point] also holds the previous move's
+/// direction. This allows only alternating between [X] and [Z] moves.
 trait PrevMove {}
 
 struct X;
@@ -426,6 +483,7 @@ struct Line<P: PrevMove> {
 }
 
 impl<P: PrevMove> Line<P> {
+    /// Create a new [Line] from the given [Node] positions
     fn from_position_pair(position0: Position, position1: Position) -> Self {
         let mut nodes = NodeList::with_capacity(2);
 
@@ -442,6 +500,11 @@ impl<P: PrevMove> Line<P> {
 impl<P: PrevMove> Geometry for Line<P> {}
 
 impl BaseBuilder<Line<X>> {
+    /// Places a new [Node] at the given z, but with the previous [Node]'s x value.
+    ///
+    /// There is a minimum distance [MIN_DISTANCE], if the new position is
+    /// below this value, the new point will be moved further away to reach
+    /// the minimum distance
     fn move_z_to(self, z: f32) -> BaseBuilder<Triangle<Z>> {
         let middle = self.geometry.nodes.len() - 1;
         let x = self.geometry.nodes[middle].position.x;
@@ -453,6 +516,12 @@ impl BaseBuilder<Line<X>> {
         }
     }
 
+    /// Places a new [Node] moving in z direction with the given distance, but
+    /// with the previous [Node]'s x value.
+    ///
+    /// There is a minimum distance [MIN_DISTANCE], if the new position is
+    /// below this value, the new point will be moved further away to reach
+    /// the minimum distance
     fn move_z_with(self, distance: f32) -> BaseBuilder<Triangle<Z>> {
         let middle = self.geometry.nodes.len() - 1;
         let x = self.geometry.nodes[middle].position.x;
@@ -465,6 +534,11 @@ impl BaseBuilder<Line<X>> {
 }
 
 impl BaseBuilder<Line<Z>> {
+    /// Places a new [Node] at the given x, but with the previous [Node]'s z value.
+    ///
+    /// There is a minimum distance [MIN_DISTANCE], if the new position is
+    /// below this value, the new point will be moved further away to reach
+    /// the minimum distance
     fn move_x_to(self, x: f32) -> BaseBuilder<Triangle<X>> {
         let middle = self.geometry.nodes.len() - 1;
         let x = self.geometry.nodes[middle].position.x
@@ -476,6 +550,12 @@ impl BaseBuilder<Line<Z>> {
         }
     }
 
+    /// Places a new [Node] moving in x direction with the given distance, but
+    /// with the previous [Node]'s z value.
+    ///
+    /// There is a minimum distance [MIN_DISTANCE], if the new position is
+    /// below this value, the new point will be moved further away to reach
+    /// the minimum distance
     fn move_x_with(self, distance: f32) -> BaseBuilder<Triangle<X>> {
         let middle = self.geometry.nodes.len() - 1;
         let x = self.geometry.nodes[middle].position.x + min_distance(distance);
@@ -493,6 +573,9 @@ struct Triangle<P: PrevMove> {
 }
 
 impl<To: PrevMove> Triangle<To> {
+    /// Create a new [Triangle] from the [Line] and the node position
+    ///
+    /// It also calculates the [Turn] of the middle node
     fn from_line<From: PrevMove>(line: Line<From>, position: Position) -> Self {
         let mut nodes = line.nodes;
 
@@ -523,6 +606,11 @@ impl<To: PrevMove> Triangle<To> {
 impl<P: PrevMove> Geometry for Triangle<P> {}
 
 impl BaseBuilder<Triangle<X>> {
+    /// Places a new [Node] at the given z, but with the previous [Node]'s x value.
+    ///
+    /// There is a minimum distance [MIN_DISTANCE], if the new position is
+    /// below this value, the new point will be moved further away to reach
+    /// the minimum distance
     fn move_z_to(self, z: f32) -> BaseBuilder<Polygon<Z>> {
         let middle = self.geometry.nodes.len() - 1;
         let x = self.geometry.nodes[middle].position.x;
@@ -534,6 +622,12 @@ impl BaseBuilder<Triangle<X>> {
         }
     }
 
+    /// Places a new [Node] moving in z direction with the given distance, but
+    /// with the previous [Node]'s x value.
+    ///
+    /// There is a minimum distance [MIN_DISTANCE], if the new position is
+    /// below this value, the new point will be moved further away to reach
+    /// the minimum distance
     fn move_z_with(self, distance: f32) -> BaseBuilder<Polygon<Z>> {
         let middle = self.geometry.nodes.len() - 1;
         let x = self.geometry.nodes[middle].position.x;
@@ -546,6 +640,11 @@ impl BaseBuilder<Triangle<X>> {
 }
 
 impl BaseBuilder<Triangle<Z>> {
+    /// Places a new [Node] at the given x, but with the previous [Node]'s z value.
+    ///
+    /// There is a minimum distance [MIN_DISTANCE], if the new position is
+    /// below this value, the new point will be moved further away to reach
+    /// the minimum distance
     fn move_x_to(self, x: f32) -> BaseBuilder<Polygon<X>> {
         let middle = self.geometry.nodes.len() - 1;
         let x = self.geometry.nodes[middle].position.x
@@ -557,6 +656,12 @@ impl BaseBuilder<Triangle<Z>> {
         }
     }
 
+    /// Places a new [Node] moving in x direction with the given distance, but
+    /// with the previous [Node]'s z value.
+    ///
+    /// There is a minimum distance [MIN_DISTANCE], if the new position is
+    /// below this value, the new point will be moved further away to reach
+    /// the minimum distance
     fn move_x_with(self, distance: f32) -> BaseBuilder<Polygon<X>> {
         let middle = self.geometry.nodes.len() - 1;
         let x = self.geometry.nodes[middle].position.x + min_distance(distance);
@@ -576,6 +681,12 @@ struct Polygon<P: PrevMove> {
 }
 
 impl<To: PrevMove> Polygon<To> {
+    /// Create a new [Polygon] from the [Triangle] and the [Node] [Position]
+    ///
+    /// It also calculates the [Turn] of the third [Node]
+    ///
+    /// It also saves the indices of the second and third [Node] in the correct
+    /// cw or ccw list.
     fn from_triangle<From: PrevMove>(triangle: Triangle<From>, position: Position) -> Self {
         let mut polygon = Self {
             nodes: triangle.nodes,
@@ -601,6 +712,11 @@ impl<To: PrevMove> Polygon<To> {
 }
 
 impl<P: PrevMove> Polygon<P> {
+    /// Adds the given [Node] positions to the [NodeList]
+    ///
+    /// Updates the connections of the [NodeList]
+    ///
+    /// Calculates the [Node]'s [Turn] and saves it in the right cw/ccw list.
     fn insert_node(&mut self, position: Position) {
         let new_i = self.nodes.len();
 
@@ -611,6 +727,8 @@ impl<P: PrevMove> Polygon<P> {
         self.calc_node_turn(self.nodes[new_i].connection.prev);
     }
 
+    /// Calculates the [Turn] of the [Node] with the given index and
+    /// saves it if it was the first time it was calculated.
     fn calc_node_turn(&mut self, index: usize) -> Turn {
         let p_1 = &self.nodes[self.nodes[index].connection.prev].position;
         let p_2 = &self.nodes[index].position;
@@ -638,6 +756,11 @@ impl<P: PrevMove> Polygon<P> {
 impl<P: PrevMove> Geometry for Polygon<P> {}
 
 impl BaseBuilder<Polygon<X>> {
+    /// Places a new [Node] at the given z, but with the previous [Node]'s x value.
+    ///
+    /// There is a minimum distance [MIN_DISTANCE], if the new position is
+    /// below this value, the new point will be moved further away to reach
+    /// the minimum distance
     fn move_z_to(mut self, z: f32) -> BaseBuilder<Polygon<Z>> {
         let middle = self.geometry.nodes.len() - 1;
         let x = self.geometry.nodes[middle].position.x;
@@ -656,6 +779,12 @@ impl BaseBuilder<Polygon<X>> {
         }
     }
 
+    /// Places a new [Node] moving in z direction with the given distance, but
+    /// with the previous [Node]'s x value.
+    ///
+    /// There is a minimum distance [MIN_DISTANCE], if the new position is
+    /// below this value, the new point will be moved further away to reach
+    /// the minimum distance
     fn move_z_with(mut self, distance: f32) -> BaseBuilder<Polygon<Z>> {
         let middle = self.geometry.nodes.len() - 1;
         let x = self.geometry.nodes[middle].position.x;
@@ -675,6 +804,11 @@ impl BaseBuilder<Polygon<X>> {
 }
 
 impl BaseBuilder<Polygon<Z>> {
+    /// Places a new [Node] at the given x, but with the previous [Node]'s z value.
+    ///
+    /// There is a minimum distance [MIN_DISTANCE], if the new position is
+    /// below this value, the new point will be moved further away to reach
+    /// the minimum distance
     fn move_x_to(mut self, x: f32) -> BaseBuilder<Polygon<X>> {
         let middle = self.geometry.nodes.len() - 1;
         let x = self.geometry.nodes[middle].position.x
@@ -693,6 +827,12 @@ impl BaseBuilder<Polygon<Z>> {
         }
     }
 
+    /// Places a new [Node] moving in x direction with the given distance, but
+    /// with the previous [Node]'s z value.
+    ///
+    /// There is a minimum distance [MIN_DISTANCE], if the new position is
+    /// below this value, the new point will be moved further away to reach
+    /// the minimum distance
     fn move_x_with(mut self, distance: f32) -> BaseBuilder<Polygon<X>> {
         let middle = self.geometry.nodes.len() - 1;
         let x = self.geometry.nodes[middle].position.x + min_distance(distance);
@@ -712,6 +852,7 @@ impl BaseBuilder<Polygon<Z>> {
 }
 
 impl<P: PrevMove> BaseBuilder<Polygon<P>> {
+    /// Calculates the mesh data (vertices, normals, indices) of the base
     fn build(mut self) -> Base {
         let y = HALF_SIZE_DEFAULT.y;
         let nodes_len = self.geometry.nodes.len();
@@ -924,10 +1065,14 @@ impl std::ops::Not for Turn {
 struct NodeList(Vec<Node>);
 
 impl NodeList {
+    /// Creates a new [NodeList] with the given capacity
     fn with_capacity(capacity: usize) -> Self {
         Self(Vec::with_capacity(capacity))
     }
 
+    /// Returns true if the [Turn] of the [Node] at the given index changed
+    ///
+    /// If it changed then it also updates the [Node] with the new [Turn]
     fn is_turn_changed(&mut self, index: usize) -> bool {
         let p_1 = &self[self[index].connection.prev].position;
         let p_2 = &self[index].position;
@@ -960,6 +1105,8 @@ struct Node {
 }
 
 impl Node {
+    /// Creates a new [Node] at the given [Position], with [Turn::Undefined]
+    /// and sets the [Connection] to the proveded prev/next indices.
     fn new(position: Position, prev: usize, next: usize) -> Self {
         Self {
             connection: Connection { prev, next },
@@ -982,6 +1129,7 @@ struct Position {
 }
 
 impl Position {
+    /// Creates a new [Position] at given x and z
     const fn new(x: f32, z: f32) -> Self {
         Self { x, z }
     }
