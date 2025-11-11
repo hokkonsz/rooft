@@ -1,10 +1,9 @@
-mod reshape;
-mod resize;
+mod spawn_base;
 
 use bevy::app::App;
 
 pub fn plugin(app: &mut App) {
-    app.add_plugins(reshape::plugin).add_plugins(resize::plugin)
+    app.add_plugins(spawn_base::plugin)
 	//..
 	;
 }

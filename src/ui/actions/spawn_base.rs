@@ -5,7 +5,7 @@ use crate::{
     color,
     core::{
         actions::{ActionQue, ActionState},
-        base::{BaseShape, OnReshapeBase},
+        base::{BaseShape, OnSpawnBase},
     },
     ui::{BAR_SIZE, bundles::button, left_panel::LeftPanel},
 };
@@ -13,20 +13,20 @@ use crate::{
 pub fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        (update, buttons).run_if(in_state(ActionState::ReshapeBase)),
+        (update, buttons).run_if(in_state(ActionState::SpawnBase)),
     )
-    .add_systems(OnEnter(ActionState::ReshapeBase), show)
-    .add_systems(OnExit(ActionState::ReshapeBase), hide);
+    .add_systems(OnEnter(ActionState::SpawnBase), show)
+    .add_systems(OnExit(ActionState::SpawnBase), hide);
 }
 
 #[derive(Component)]
-struct ReshapePanel;
+struct SpawnBasePanel;
 
 fn show(mut commands: Commands, assets: Res<AppAssets>) {
     // Display Panel
     commands
         .spawn((
-            ReshapePanel,
+            SpawnBasePanel,
             Node {
                 width: Val::Px(420.),
                 height: Val::Px(110.),
@@ -51,7 +51,7 @@ fn show(mut commands: Commands, assets: Res<AppAssets>) {
                     height: Val::Px(30.),
                     ..default()
                 },
-                Text::from("Select shape"),
+                Text::from("Select base shape"),
                 TextFont {
                     font: assets.fonts.iosevka.regular.clone(),
                     font_size: 12.,
@@ -86,7 +86,7 @@ fn show(mut commands: Commands, assets: Res<AppAssets>) {
         });
 }
 
-fn hide(mut commands: Commands, panel: Single<Entity, With<ReshapePanel>>) {
+fn hide(mut commands: Commands, panel: Single<Entity, With<SpawnBasePanel>>) {
     commands.entity(*panel).despawn();
 }
 
@@ -112,7 +112,7 @@ fn buttons(
                 *bg = BackgroundColor(color::BLACK44);
                 *bc = BorderColor(color::BLACK44);
 
-                commands.trigger(OnReshapeBase(*shape));
+                commands.trigger(OnSpawnBase(*shape));
                 action_que.next();
 
                 break;
@@ -130,8 +130,8 @@ fn buttons(
 }
 
 fn update(
-    left_panel: Single<&Node, (With<LeftPanel>, Without<ReshapePanel>)>,
-    mut reshape_panel: Single<&mut Node, With<ReshapePanel>>,
+    left_panel: Single<&Node, (With<LeftPanel>, Without<SpawnBasePanel>)>,
+    mut reshape_panel: Single<&mut Node, With<SpawnBasePanel>>,
     window: Single<&Window>,
 ) {
     let Val::Px(left_panel_width) = left_panel.width else {

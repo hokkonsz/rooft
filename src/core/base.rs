@@ -1,7 +1,7 @@
 use bevy::{
     asset::RenderAssetUsages,
     prelude::*,
-    render::mesh::{Indices, PrimitiveTopology, VertexAttributeValues},
+    render::mesh::{Indices, PrimitiveTopology},
 };
 
 use crate::{assets::AppAssets, core::ElementList};
@@ -20,211 +20,70 @@ pub enum BaseShape {
 }
 
 impl BaseShape {
-    pub const fn vertices(&self, point: BasePoint) -> &[usize] {
+    fn create(&self, meshes: ResMut<Assets<Mesh>>) -> Base {
+        // Calculate half size (mm)
+        let x = HALF_SIZE_DEFAULT.x;
+        let z = HALF_SIZE_DEFAULT.z;
+
         match self {
-            BaseShape::L => match point {
-                BasePoint::A => &[6, 7, 17, 23, 30, 31],
-                BasePoint::B => &[4, 5, 16, 22, 28, 29],
-                BasePoint::C => &[2, 3, 15, 21, 26, 27],
-                _ => &[],
-            },
-            BaseShape::N => match point {
-                BasePoint::A => &[4, 5, 20, 28, 40, 41],
-                BasePoint::B => &[6, 7, 21, 29, 38, 39],
-                BasePoint::C => &[14, 15, 22, 30, 36, 37],
-                BasePoint::D => &[12, 13, 23, 31, 34, 35],
-            },
-            _ => &[],
+            BaseShape::Rectangle => Base::builder()
+                .start_point(-x, -z)
+                .move_x_to(x)
+                .move_z_to(z)
+                .move_x_to(-x)
+                .build(meshes),
+            BaseShape::L => Base::builder()
+                .start_point(-x, -z)
+                .move_z_to(z)
+                .move_x_to(0.)
+                .move_z_to(0.)
+                .move_x_to(x)
+                .move_z_to(-z)
+                .build(meshes),
+            BaseShape::N => {
+                // Calculate special points
+                let p0 = x / 3.;
+                let p1 = z / 3.;
+
+                Base::builder()
+                    .start_point(-x, -z)
+                    .move_x_to(x)
+                    .move_z_to(z)
+                    .move_x_to(p0)
+                    .move_z_to(p1)
+                    .move_x_to(-p0)
+                    .move_z_to(z)
+                    .move_x_to(-x)
+                    .build(meshes)
+            }
         }
     }
-
-    pub fn name(&self) -> String {
-        match self {
-            BaseShape::Rectangle => String::from("Base Rectangle"),
-            BaseShape::L => String::from("Base-L"),
-            BaseShape::N => String::from("Base-N"),
-        }
-    }
-}
-
-pub enum BasePoint {
-    A,
-    B,
-    C,
-    D,
 }
 
 #[derive(Event)]
-pub struct OnReshapeBase(pub BaseShape);
+pub struct OnSpawnBase(pub BaseShape);
 
-pub fn on_reshape_base(
-    trigger: Trigger<OnReshapeBase>,
-    mut meshes: ResMut<Assets<Mesh>>,
+pub fn on_spawn_base(
+    trigger: Trigger<OnSpawnBase>,
+    meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
     mut elements: ResMut<ElementList>,
     assets: Res<AppAssets>,
 ) {
+    let base = trigger.0.create(meshes);
+
     let id = commands
         .spawn((
-            trigger.0.clone(),
-            Mesh3d(meshes.add(create_base_mesh(trigger.0))),
+            Mesh3d(base.mesh.clone()),
             MeshMaterial3d(assets.materials.matcaps.gray.clone()),
             Transform::from_xyz(0.0, 150., 0.0),
         ))
         .id();
 
-    let name = format!("{} {}", trigger.0.name(), id.index());
-    commands.entity(id).insert(Name::from(name.clone()));
+    commands.entity(id).insert(Name::from("Base"));
+    commands.insert_resource(base);
 
-    elements.list.push((id, name));
-}
-
-fn create_base_mesh(shape: BaseShape) -> Mesh {
-    match shape {
-        BaseShape::Rectangle => base_rectangle(),
-        BaseShape::L => base_l(),
-        BaseShape::N => base_n(),
-    }
-}
-
-fn base_rectangle() -> Mesh {
-    // Calculate half size (mm)
-    let x = HALF_SIZE_DEFAULT.x;
-    let z = HALF_SIZE_DEFAULT.z;
-
-    Base::builder()
-        .start_point(-x, -z)
-        .move_x_to(x)
-        .move_z_to(z)
-        .move_x_to(-x)
-        .build()
-        .mesh
-}
-
-fn base_l() -> Mesh {
-    // Calculate half size (mm)
-    let x = HALF_SIZE_DEFAULT.x;
-    let z = HALF_SIZE_DEFAULT.z;
-
-    Base::builder()
-        .start_point(-x, -z)
-        .move_z_to(z)
-        .move_x_to(0.)
-        .move_z_to(0.)
-        .move_x_to(x)
-        .move_z_to(-z)
-        .build()
-        .mesh
-}
-
-fn base_n() -> Mesh {
-    // Calculate half size (mm)
-    let x = HALF_SIZE_DEFAULT.x;
-    let z = HALF_SIZE_DEFAULT.z;
-
-    // Calculate special points
-    let p0 = x / 3.;
-    let p1 = z / 3.;
-
-    Base::builder()
-        .start_point(-x, -z)
-        .move_x_to(x)
-        .move_z_to(z)
-        .move_x_to(p0)
-        .move_z_to(p1)
-        .move_x_to(-p0)
-        .move_z_to(z)
-        .move_x_to(-x)
-        .build()
-        .mesh
-}
-
-// TODO! Remove OnResizeBase and introduce new event which allows user
-// to edit the shape nodes.
-
-#[derive(Event)]
-pub struct OnResizeBase(pub Vec2);
-
-impl From<[f32; 2]> for OnResizeBase {
-    fn from(a: [f32; 2]) -> Self {
-        Self(Vec2::new(a[0], a[1]))
-    }
-}
-
-pub fn on_resize_base(
-    trigger: Trigger<OnResizeBase>,
-    base: Single<(&Mesh3d, &BaseShape), With<BaseShape>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-) {
-    let (mesh, shape) = base.into_inner();
-
-    let Some(mesh) = meshes.get_mut(mesh) else {
-        return;
-    };
-
-    // Calculate half size (mm)
-    let (x, z) = (trigger.0.x * 0.5, trigger.0.y * 0.5);
-
-    if let Some(VertexAttributeValues::Float32x3(positions)) =
-        mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION)
-    {
-        for (index, position) in positions.iter_mut().enumerate() {
-            // Named Vertices
-            match shape {
-                BaseShape::L => {
-                    if shape.vertices(BasePoint::A).contains(&index) {
-                        *position = [0., position[1], z];
-                        continue;
-                    }
-
-                    if shape.vertices(BasePoint::B).contains(&index) {
-                        *position = [0., position[1], 0.];
-                        continue;
-                    }
-
-                    if shape.vertices(BasePoint::C).contains(&index) {
-                        *position = [x, position[1], 0.];
-                        continue;
-                    }
-                }
-                BaseShape::N => {
-                    if shape.vertices(BasePoint::A).contains(&index) {
-                        let p0 = x / 3.;
-                        *position = [-p0, position[1], z];
-                        continue;
-                    }
-
-                    if shape.vertices(BasePoint::B).contains(&index) {
-                        let p0 = x / 3.;
-                        let p1 = z / 3.;
-                        *position = [-p0, position[1], p1];
-                        continue;
-                    }
-
-                    if shape.vertices(BasePoint::C).contains(&index) {
-                        let p0 = x / 3.;
-                        let p1 = z / 3.;
-                        *position = [p0, position[1], p1];
-                        continue;
-                    }
-
-                    if shape.vertices(BasePoint::D).contains(&index) {
-                        let p0 = x / 3.;
-                        *position = [p0, position[1], z];
-                        continue;
-                    }
-                }
-                _ => (),
-            }
-
-            // Normal Vertices
-            *position = [
-                position[0].signum() * x,
-                position[1],
-                position[2].signum() * z,
-            ];
-        }
-    }
+    elements.list.push((id, String::from("Base")));
 }
 
 #[inline]
@@ -359,7 +218,7 @@ impl BaseMeshIndices {
 struct Base {
     nodes: NodeList,
     convex_turn: Turn,
-    mesh: Mesh,
+    mesh: Handle<Mesh>,
 }
 
 impl Base {
@@ -853,7 +712,7 @@ impl BaseBuilder<Polygon<Z>> {
 
 impl<P: PrevMove> BaseBuilder<Polygon<P>> {
     /// Calculates the mesh data (vertices, normals, indices) of the base
-    fn build(mut self) -> Base {
+    fn build(mut self, mut meshes: ResMut<Assets<Mesh>>) -> Base {
         let y = HALF_SIZE_DEFAULT.y;
         let nodes_len = self.geometry.nodes.len();
         let mut nodes_temp = NodeList(self.geometry.nodes.clone());
@@ -1020,13 +879,15 @@ impl<P: PrevMove> BaseBuilder<Polygon<P>> {
         Base {
             nodes: self.geometry.nodes,
             convex_turn,
-            mesh: Mesh::new(
-                PrimitiveTopology::TriangleList,
-                RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
-            )
-            .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, mesh_vertices)
-            .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_normals.0)
-            .with_inserted_indices(Indices::U32(mesh_indices.0)),
+            mesh: meshes.add(
+                Mesh::new(
+                    PrimitiveTopology::TriangleList,
+                    RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
+                )
+                .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, mesh_vertices)
+                .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_normals.0)
+                .with_inserted_indices(Indices::U32(mesh_indices.0)),
+            ),
         }
     }
 }

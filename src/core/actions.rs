@@ -13,8 +13,7 @@ pub fn plugin(app: &mut App) {
 fn setup(mut commands: Commands) {
     let mut que = ActionQue::new();
 
-    que.add(ActionState::ReshapeBase);
-    que.add(ActionState::ResizeBase);
+    que.add(ActionState::SpawnBase);
 
     commands.insert_resource(que);
 }
@@ -59,6 +58,5 @@ pub enum ActionState {
     #[default]
     None,
 
-    ReshapeBase,
-    ResizeBase,
+    SpawnBase,
 }

@@ -10,8 +10,7 @@ pub fn plugin(app: &mut App) {
         .init_resource::<ElementList>()
         // .init_state::<actions::ActionState>()
         // .add_systems(Startup, actions::setup)
-        .add_observer(base::on_reshape_base)
-        .add_observer(base::on_resize_base);
+        .add_observer(base::on_spawn_base);
 }
 
 #[derive(Default, Resource)]
