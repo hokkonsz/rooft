@@ -1,14 +1,77 @@
-use crate::assets::AppAssets;
-use crate::color;
-use crate::core::ElementList;
-use crate::ui::bundles::list_elem;
-use crate::ui::left_bar::LeftBar;
-use crate::ui::top_bar::{Tab, ToggleLeftPanelButton, ToggleLeftPanelIcon};
-use crate::ui::{BAR_SIZE, PANEL_WIDTH};
 use bevy::prelude::*;
+
+use crate::{
+    assets::AppAssets,
+    color,
+    core::ElementList,
+    ui::{BAR_SIZE, bundles::elem_button},
+};
+
+pub fn plugin(app: &mut App) {
+    app.add_systems(Startup, setup)
+        .add_systems(Update, (resize, update))
+        .add_observer(on_show)
+        .add_observer(on_hide)
+        //..
+        ;
+}
+
+fn setup(mut commands: Commands) {
+    commands
+        .spawn((
+            LeftPanel,
+            Node {
+                width: Val::Px(LeftPanel::WIDTH),
+                height: Val::Percent(100.),
+                top: Val::Px(BAR_SIZE),
+                left: Val::Px(BAR_SIZE),
+                align_items: AlignItems::Start,
+                justify_content: JustifyContent::Start,
+                flex_direction: FlexDirection::Row,
+                border: UiRect::left(Val::Px(2.)),
+                flex_shrink: 0.,
+                ..default()
+            },
+            BackgroundColor(color::BLACK34),
+            BorderColor(color::BLACK30),
+        ))
+        .with_children(|left_panel| {
+            left_panel.spawn((
+                LeftPanelList,
+                Node {
+                    width: Val::Percent(100.),
+                    height: Val::Percent(100.),
+                    padding: UiRect::horizontal(Val::Px(10.)),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Start,
+                    flex_direction: FlexDirection::Column,
+                    ..default()
+                },
+                BackgroundColor(color::BLACK34),
+            ));
+
+            left_panel.spawn((
+                LeftPanelHandle,
+                Node {
+                    width: Val::Px(LeftPanel::HANDLE_WIDTH),
+                    height: Val::Percent(100.),
+                    align_items: AlignItems::Start,
+                    justify_content: JustifyContent::Start,
+                    flex_direction: FlexDirection::Column,
+                    ..default()
+                },
+                BackgroundColor(color::BLACK34),
+            ));
+        });
+}
 
 #[derive(Component)]
 pub struct LeftPanel;
+
+impl LeftPanel {
+    pub const WIDTH: f32 = 250.;
+    pub const HANDLE_WIDTH: f32 = 4.;
+}
 
 #[derive(Component)]
 pub struct LeftPanelList;
@@ -17,63 +80,44 @@ pub struct LeftPanelList;
 #[require(Button)]
 pub struct LeftPanelHandle;
 
-pub fn toggle(
-    button: Single<
-        (&Interaction, &mut BackgroundColor, &mut BorderColor),
-        (Changed<Interaction>, With<ToggleLeftPanelButton>),
-    >,
-    mut button_img: Single<&mut ImageNode, With<ToggleLeftPanelIcon>>,
-    panel: Single<(&Node, &mut Visibility), With<LeftPanel>>,
-    mut tab_node: Single<&mut Node, (With<Tab>, Without<LeftPanel>)>,
-    mut bar_bg: Single<&mut BackgroundColor, (With<LeftBar>, Without<ToggleLeftPanelButton>)>,
-    assets: Res<AppAssets>,
-) {
-    let (button_interact, mut button_bg, mut button_bc) = button.into_inner();
-    let (panel_node, mut panel_vis) = panel.into_inner();
+#[derive(Event)]
+pub struct OnShowLeftPanel;
 
-    match button_interact {
-        Interaction::Pressed => {
-            *button_bg = BackgroundColor(color::BLACK44);
-            *button_bc = BorderColor(color::BLACK44);
-            match *panel_vis {
-                Visibility::Inherited => {
-                    *panel_vis = Visibility::Hidden;
-                    **bar_bg = BackgroundColor(color::BLACK30);
-                    button_img.image = assets.icons.panel_show.clone();
-                    tab_node.left = Val::Px(BAR_SIZE);
-                }
-                Visibility::Visible => {
-                    *panel_vis = Visibility::Hidden;
-                    **bar_bg = BackgroundColor(color::BLACK30);
-                    button_img.image = assets.icons.panel_show.clone();
-                    tab_node.left = Val::Px(BAR_SIZE);
-                }
-                Visibility::Hidden => {
-                    *panel_vis = Visibility::Inherited;
-                    **bar_bg = BackgroundColor(color::BLACK34);
-                    button_img.image = assets.icons.panel_hide.clone();
-                    if let Val::Px(width) = panel_node.width {
-                        tab_node.left = Val::Px(width + BAR_SIZE);
-                    }
-                }
-            }
-        }
-        Interaction::Hovered => {
-            *button_bg = BackgroundColor(color::BLACK38);
-            *button_bc = BorderColor(color::BLACK38);
-        }
-        Interaction::None => {
-            *button_bg = BackgroundColor(color::BLACK30);
-            *button_bc = BorderColor(color::BLACK30);
-        }
+#[derive(Event)]
+pub struct OnHideLeftPanel;
+
+#[derive(Event)]
+pub struct OnResizeLeftPanel(pub f32);
+
+fn on_show(
+    _trigger: Trigger<OnShowLeftPanel>,
+    panel: Single<(&Node, &mut Visibility), With<LeftPanel>>,
+    mut commands: Commands,
+) {
+    let (node, mut visibility) = panel.into_inner();
+
+    *visibility = Visibility::Inherited;
+
+    if let Val::Px(width) = node.width {
+        commands.trigger(OnResizeLeftPanel(width));
     }
 }
 
-pub fn resize(
+fn on_hide(
+    _trigger: Trigger<OnHideLeftPanel>,
+    mut visibility: Single<&mut Visibility, With<LeftPanel>>,
+    mut commands: Commands,
+) {
+    **visibility = Visibility::Hidden;
+
+    commands.trigger(OnResizeLeftPanel(0.));
+}
+
+fn resize(
     window: Single<&mut Window>,
     panel_handle: Single<(&Interaction, &mut BackgroundColor), With<LeftPanelHandle>>,
     mut panel_node: Single<&mut Node, With<LeftPanel>>,
-    mut tab_node: Single<&mut Node, (With<Tab>, Without<LeftPanel>)>,
+    mut commands: Commands,
 ) {
     let (ph_interact, mut ph_bg) = panel_handle.into_inner();
 
@@ -84,10 +128,12 @@ pub fn resize(
                 return;
             };
 
-            let new_width = (cursor_pos.x - BAR_SIZE).clamp(PANEL_WIDTH * 0.5, PANEL_WIDTH * 2.);
+            let new_width = (cursor_pos.x - BAR_SIZE)
+                .clamp(LeftPanel::WIDTH * 0.5, LeftPanel::WIDTH * 2.)
+                + LeftPanel::HANDLE_WIDTH;
 
             panel_node.width = Val::Px(new_width);
-            tab_node.left = Val::Px(new_width + BAR_SIZE);
+            commands.trigger(OnResizeLeftPanel(new_width));
         }
         Interaction::Hovered => {
             *ph_bg = BackgroundColor(color::BLACK44);
@@ -102,7 +148,7 @@ pub fn resize(
 #[require(Button)]
 struct PanelElemButton;
 
-pub fn update(
+fn update(
     elements: Res<ElementList>,
     assets: Res<AppAssets>,
     panel_entity: Single<Entity, With<LeftPanelList>>,
@@ -123,9 +169,9 @@ pub fn update(
         let text = format!("{} : {name}", entity.index());
         children.push(
             commands
-                .spawn(list_elem(
+                .spawn(elem_button(
                     text,
-                    &assets.fonts.iosevka.italic,
+                    assets.fonts.iosevka.italic.clone(),
                     PanelElemButton,
                 ))
                 .id(),

@@ -5,8 +5,11 @@ use bevy::{
     prelude::*,
 };
 
+use crate::color;
+
 pub fn plugin(app: &mut App) {
-    app.add_systems(Startup, setup)
+    app.insert_resource(ClearColor(color::BLACK18))
+        .add_systems(Startup, setup)
         .add_systems(Update, (rotate, zoom));
 }
 
@@ -14,6 +17,8 @@ fn setup(mut commands: Commands) {
     let translation = Vec3::new(5000., 20000.0, 5000.0);
 
     commands.spawn((
+        Name::from("Camera"),
+        // MeshPickingCamera,
         Camera3d::default(),
         Transform::from_translation(translation).looking_at(Vec3::ZERO, Vec3::Y),
     ));
