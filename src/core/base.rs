@@ -74,13 +74,13 @@ pub fn on_spawn_base(
 
     let id = commands
         .spawn((
+            Name::from("Base"),
             Mesh3d(base.mesh.clone()),
             MeshMaterial3d(assets.materials.matcaps.gray.clone()),
             Transform::from_xyz(0.0, 150., 0.0),
         ))
         .id();
 
-    commands.entity(id).insert(Name::from("Base"));
     commands.insert_resource(base);
 
     elements.list.push((id, String::from("Base")));
@@ -712,6 +712,7 @@ impl BaseBuilder<Polygon<Z>> {
 
 impl<P: PrevMove> BaseBuilder<Polygon<P>> {
     /// Calculates the mesh data (vertices, normals, indices) of the base
+    /// using ear clipping algorithm to triangulate the top and bottom faces
     fn build(mut self, mut meshes: ResMut<Assets<Mesh>>) -> Base {
         let y = HALF_SIZE_DEFAULT.y;
         let nodes_len = self.geometry.nodes.len();
