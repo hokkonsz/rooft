@@ -1,5 +1,6 @@
 mod actions;
 mod bundles;
+mod camera_view;
 mod left_bar;
 mod left_panel;
 mod top_bar;
@@ -19,6 +20,7 @@ pub fn plugin(app: &mut App) {
         .add_plugins(left_bar::plugin)
         .add_plugins(left_panel::plugin)
         .add_plugins(actions::plugin)
+        .add_plugins(camera_view::plugin)
         //.add_plugins(FrameTimeDiagnosticsPlugin::default())
         ;
 }

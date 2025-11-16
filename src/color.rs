@@ -16,4 +16,8 @@ pub const BLACK68: Color = Color::srgb(0.265625, 0.265625, 0.265625);
 pub const RED118: Color = Color::srgb(0.4609375, 0., 0.);
 pub const RED128: Color = Color::srgb(0.5, 0., 0.);
 
+pub const WHITE110: Color = Color::srgb(0.42578125, 0.44140625, 0.41796875);
+pub const WHITE150: Color = Color::srgb(0.60546875, 0.60546875, 0.56640625);
+pub const WHITE170: Color = Color::srgb(0.6953125, 0.6875, 0.640625);
 pub const WHITE200: Color = Color::srgb(0.78125, 0.765625, 0.71484375);
+pub const WHITE220: Color = Color::srgb(0.890625, 0.8828125, 0.85546875); //228, 226, 219

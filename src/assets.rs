@@ -27,6 +27,7 @@ fn load_assets(
         close: asset_server.load("icons/close.png"),
         panel_hidden: asset_server.load("icons/panel_hidden.png"),
         panel_visible: asset_server.load("icons/panel_visible.png"),
+        lock: asset_server.load("icons/lock.png"),
     };
 
     app_assets.images = ImageAssets {
@@ -76,6 +77,7 @@ pub struct IconsAssets {
     pub close: Handle<Image>,
     pub panel_hidden: Handle<Image>,
     pub panel_visible: Handle<Image>,
+    pub lock: Handle<Image>,
 }
 
 #[derive(Default)]
