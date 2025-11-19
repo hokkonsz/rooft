@@ -15,6 +15,7 @@
 //!   away from the face, it is not guaranteed to be normalized for scaled meshes.
 
 use bevy::app::prelude::*;
+use bevy::asset::Handle;
 use bevy::ecs::component::HookContext;
 use bevy::ecs::prelude::*;
 use bevy::ecs::world::DeferredWorld;
@@ -23,7 +24,7 @@ use bevy::input::keyboard::KeyCode;
 use bevy::pbr::MeshMaterial3d;
 use bevy::picking::backend::ray::RayMap;
 use bevy::picking::backend::{HitData, PointerHits};
-use bevy::picking::events::{Pointer, Released};
+use bevy::picking::events::{Pointer, Pressed};
 use bevy::picking::mesh_picking::ray_cast::{
     MeshRayCast, MeshRayCastSettings, RayCastVisibility, SimplifiedMesh,
 };
@@ -139,29 +140,34 @@ pub fn update_hits(
     }
 }
 
-#[derive(Component)]
+#[derive(Debug, Component)]
 #[component(on_add = on_add)]
 #[component(on_remove = on_remove)]
-pub struct SelectedMesh;
+pub struct SelectedMesh {
+    original_matcap: Handle<MatCap>,
+}
 
 fn on_add(mut world: DeferredWorld, HookContext { entity, .. }: HookContext) {
-    let assets = world.resource_ref::<AppAssets>();
-
-    *world.get_mut::<MeshMaterial3d<MatCap>>(entity).unwrap() =
-        MeshMaterial3d(assets.materials.matcaps.blue.clone());
+    world.get_mut::<MeshMaterial3d<MatCap>>(entity).unwrap().0 = world
+        .resource_ref::<AppAssets>()
+        .materials
+        .matcaps
+        .blue
+        .clone();
 }
 
 fn on_remove(mut world: DeferredWorld, HookContext { entity, .. }: HookContext) {
-    let assets = world.resource_ref::<AppAssets>();
-
-    *world.get_mut::<MeshMaterial3d<MatCap>>(entity).unwrap() =
-        MeshMaterial3d(assets.materials.matcaps.gray.clone());
+    world.get_mut::<MeshMaterial3d<MatCap>>(entity).unwrap().0 = world
+        .get::<SelectedMesh>(entity)
+        .unwrap()
+        .original_matcap
+        .clone();
 }
 
 pub fn on_mesh_pick(
-    trigger: Trigger<Pointer<Released>>,
+    trigger: Trigger<Pointer<Pressed>>,
     selected: Query<Entity, With<SelectedMesh>>,
-    nonselected: Query<Entity, (With<Mesh3d>, Without<SelectedMesh>)>,
+    nonselected: Query<(Entity, &MeshMaterial3d<MatCap>), (With<Mesh3d>, Without<SelectedMesh>)>,
     input: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
 ) {
@@ -179,9 +185,11 @@ pub fn on_mesh_pick(
         }
     }
 
-    for entity in nonselected {
+    for (entity, matcap) in nonselected {
         if entity == trigger.target {
-            commands.entity(entity).insert(SelectedMesh);
+            commands.entity(entity).insert(SelectedMesh {
+                original_matcap: matcap.0.clone(),
+            });
             break;
         }
     }
