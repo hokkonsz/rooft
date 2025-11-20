@@ -2,4 +2,5 @@
 
 [![dependency status](https://deps.rs/repo/github/hokkonsz/rooft/status.svg)](https://deps.rs/repo/github/hokkonsz/rooft)
 
-A 3D application to design roofs.
+A work in progress 3D application to quickly design roofs and calculate
+material usage.
