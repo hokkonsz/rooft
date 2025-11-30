@@ -4,7 +4,7 @@ use crate::{
     color,
     ui::{
         BAR_SIZE,
-        left_panel::{OnHideLeftPanel, OnShowLeftPanel},
+        left_panel::{HideLeftPanel, ShowLeftPanel},
     },
 };
 
@@ -37,14 +37,14 @@ fn setup(mut commands: Commands) {
 pub struct LeftBar;
 
 fn on_show_left_panel(
-    _trigger: Trigger<OnShowLeftPanel>,
+    _on_show_left_panel: On<ShowLeftPanel>,
     mut left_bar: Single<&mut BackgroundColor, With<LeftBar>>,
 ) {
     **left_bar = BackgroundColor(color::BLACK34);
 }
 
 fn on_hide_left_panel(
-    _trigger: Trigger<OnHideLeftPanel>,
+    _on_hide_left_panel: On<HideLeftPanel>,
     mut left_bar: Single<&mut BackgroundColor, With<LeftBar>>,
 ) {
     **left_bar = BackgroundColor(color::BLACK30);

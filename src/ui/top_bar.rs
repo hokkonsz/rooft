@@ -4,10 +4,11 @@ use crate::{
     ui::{
         BAR_SIZE,
         bundles::button_bar,
-        left_panel::{LeftPanel, OnHideLeftPanel, OnResizeLeftPanel, OnShowLeftPanel},
+        left_panel::{HideLeftPanel, LeftPanel, ResizeLeftPanel, ShowLeftPanel},
     },
 };
-use bevy::{prelude::*, winit::WinitWindows};
+
+use bevy::{ecs::system::NonSendMarker, prelude::*, winit::WINIT_WINDOWS};
 
 pub fn plugin(app: &mut App) {
     app.add_systems(Startup, setup)
@@ -67,7 +68,7 @@ fn setup(mut commands: Commands, assets: Res<AppAssets>) {
                                 ..default()
                             },
                             BackgroundColor(color::BLACK18),
-                            BorderColor(color::BLACK18),
+                            BorderColor::all(color::BLACK18),
                             BorderRadius::all(Val::Px(3.)),
                         ))
                         .with_child((
@@ -129,7 +130,7 @@ fn setup(mut commands: Commands, assets: Res<AppAssets>) {
                             ..default()
                         },
                         BackgroundColor(color::BLACK30),
-                        BorderColor(color::BLACK30),
+                        BorderColor::all(color::BLACK30),
                         BorderRadius::bottom_right(Val::Px(10.)),
                     ));
 
@@ -152,7 +153,7 @@ fn setup(mut commands: Commands, assets: Res<AppAssets>) {
                             ..default()
                         },
                         BackgroundColor(color::BLACK18),
-                        BorderColor(color::BLACK18),
+                        BorderColor::all(color::BLACK18),
                         BorderRadius::top(Val::Px(10.)),
                     ))
                     .with_child((
@@ -194,7 +195,7 @@ fn setup(mut commands: Commands, assets: Res<AppAssets>) {
                             ..default()
                         },
                         BackgroundColor(color::BLACK30),
-                        BorderColor(color::BLACK30),
+                        BorderColor::all(color::BLACK30),
                         BorderRadius::bottom_left(Val::Px(10.)),
                     ));
                 });
@@ -252,28 +253,28 @@ fn toggle_left_panel(
     match interact {
         Interaction::Pressed => {
             *bg = BackgroundColor(color::BLACK44);
-            *bc = BorderColor(color::BLACK44);
+            *bc = BorderColor::all(color::BLACK44);
 
             match *state {
                 ToggleLeftPanelButton::Visible => {
                     *state = ToggleLeftPanelButton::Hidden;
                     button_img.image = assets.icons.panel_hidden.clone();
-                    commands.trigger(OnHideLeftPanel);
+                    commands.trigger(HideLeftPanel);
                 }
                 ToggleLeftPanelButton::Hidden => {
                     *state = ToggleLeftPanelButton::Visible;
                     button_img.image = assets.icons.panel_visible.clone();
-                    commands.trigger(OnShowLeftPanel);
+                    commands.trigger(ShowLeftPanel);
                 }
             };
         }
         Interaction::Hovered => {
             *bg = BackgroundColor(color::BLACK38);
-            *bc = BorderColor(color::BLACK38);
+            *bc = BorderColor::all(color::BLACK38);
         }
         Interaction::None => {
             *bg = BackgroundColor(color::BLACK30);
-            *bc = BorderColor(color::BLACK30);
+            *bc = BorderColor::all(color::BLACK30);
         }
     }
 }
@@ -291,10 +292,10 @@ impl Tab {
 pub struct TabName;
 
 fn on_resize_left_panel(
-    trigger: Trigger<OnResizeLeftPanel>,
+    on_resize_left_panel: On<ResizeLeftPanel>,
     mut tab: Single<&mut Node, With<Tab>>,
 ) {
-    tab.left = Val::Px(trigger.event().0 + BAR_SIZE)
+    tab.left = Val::Px(on_resize_left_panel.event().0 + BAR_SIZE)
 }
 
 #[derive(Component)]
@@ -333,7 +334,7 @@ fn maximize(
         (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<MaximizeButton>),
     >,
-    mut winit: NonSendMut<WinitWindows>,
+    _non_send_marker: NonSendMarker,
 ) {
     let (button_interact, mut button_bg) = button.into_inner();
 
@@ -341,11 +342,11 @@ fn maximize(
         Interaction::Pressed => {
             *button_bg = BackgroundColor(color::BLACK44);
 
-            let Some(winit_window) = winit.windows.iter_mut().next() else {
-                return;
-            };
-
-            winit_window.1.set_maximized(!winit_window.1.is_maximized());
+            WINIT_WINDOWS.with_borrow_mut(|winit_windows| {
+                if let Some(window) = winit_windows.windows.iter_mut().next() {
+                    window.1.set_maximized(!window.1.is_maximized());
+                }
+            });
         }
         Interaction::Hovered => {
             *button_bg = BackgroundColor(color::BLACK38);
@@ -362,14 +363,14 @@ pub struct CloseButton;
 
 fn close(
     button: Single<(&Interaction, &mut BackgroundColor), (Changed<Interaction>, With<CloseButton>)>,
-    mut app_exit_events: ResMut<Events<bevy::app::AppExit>>,
+    mut app_exit_messages: ResMut<Messages<bevy::app::AppExit>>,
 ) {
     let (button_interact, mut button_bg) = button.into_inner();
 
     match button_interact {
         Interaction::Pressed => {
             *button_bg = BackgroundColor(color::RED128);
-            app_exit_events.send(AppExit::Success);
+            app_exit_messages.write(AppExit::Success);
         }
         Interaction::Hovered => {
             *button_bg = BackgroundColor(color::RED118);

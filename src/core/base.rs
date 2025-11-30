@@ -1,7 +1,7 @@
 use bevy::{
     asset::RenderAssetUsages,
+    mesh::{Indices, PrimitiveTopology},
     prelude::*,
-    render::mesh::{Indices, PrimitiveTopology},
 };
 
 use crate::{assets::AppAssets, core::ElementList};
@@ -64,13 +64,13 @@ impl BaseShape {
 pub struct OnSpawnBase(pub BaseShape);
 
 pub fn on_spawn_base(
-    trigger: Trigger<OnSpawnBase>,
+    on_spawn_base: On<OnSpawnBase>,
     meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
     mut elements: ResMut<ElementList>,
     assets: Res<AppAssets>,
 ) {
-    let base = trigger.0.create(meshes);
+    let base = on_spawn_base.0.create(meshes);
 
     let id = commands
         .spawn((

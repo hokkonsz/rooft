@@ -76,7 +76,6 @@ fn rotate(
     }
 
     if **camera_view_curr != CameraView::Free {
-        println!("test");
         camera_view_next.set(CameraView::Free);
     }
 
@@ -109,11 +108,11 @@ fn zoom(
 }
 
 fn view_transition(
-    mut state_events: EventReader<StateTransitionEvent<CameraView>>,
+    mut camera_view_reader: MessageReader<StateTransitionEvent<CameraView>>,
     mut camera: Single<&mut Transform, With<Camera>>,
     settings: Res<CameraSettings>,
 ) {
-    let Some(transition) = state_events.read().next() else {
+    let Some(transition) = camera_view_reader.read().next() else {
         return;
     };
 

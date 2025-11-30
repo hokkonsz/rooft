@@ -16,22 +16,24 @@
 
 use bevy::app::prelude::*;
 use bevy::asset::Handle;
-use bevy::ecs::component::HookContext;
+use bevy::camera::Camera;
+use bevy::camera::visibility::RenderLayers;
+use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::prelude::*;
 use bevy::ecs::world::DeferredWorld;
 use bevy::input::ButtonInput;
 use bevy::input::keyboard::KeyCode;
+use bevy::mesh::Mesh3d;
 use bevy::pbr::MeshMaterial3d;
 use bevy::picking::backend::ray::RayMap;
 use bevy::picking::backend::{HitData, PointerHits};
-use bevy::picking::events::{Pointer, Pressed};
+use bevy::picking::events::{Pointer, Press};
 use bevy::picking::mesh_picking::ray_cast::{
     MeshRayCast, MeshRayCastSettings, RayCastVisibility, SimplifiedMesh,
 };
 use bevy::picking::pointer::PointerButton;
-use bevy::picking::{PickSet, Pickable};
+use bevy::picking::{Pickable, PickingSystems};
 use bevy::reflect::prelude::*;
-use bevy::render::{prelude::*, view::RenderLayers};
 
 use crate::assets::AppAssets;
 use crate::materials::MatCap;
@@ -75,7 +77,7 @@ pub fn plugin(app: &mut App) {
     app.init_resource::<MeshPickingSettings>()
         .register_type::<MeshPickingSettings>()
         .register_type::<SimplifiedMesh>()
-        .add_systems(PreUpdate, update_hits.in_set(PickSet::Backend))
+        .add_systems(PreUpdate, update_hits.in_set(PickingSystems::Backend))
         .add_observer(on_mesh_pick);
 }
 
@@ -88,7 +90,7 @@ pub fn update_hits(
     marked_targets: Query<&Pickable>,
     layers: Query<&RenderLayers>,
     mut ray_cast: MeshRayCast,
-    mut output: EventWriter<PointerHits>,
+    mut pointer_hits_writer: MessageWriter<PointerHits>,
 ) {
     for (&ray_id, &ray) in ray_map.iter() {
         let Ok((camera, cam_can_pick, cam_layers)) = picking_cameras.get(ray_id.camera) else {
@@ -135,7 +137,7 @@ pub fn update_hits(
             .collect::<Vec<_>>();
         let order = camera.order as f32;
         if !picks.is_empty() {
-            output.write(PointerHits::new(ray_id.pointer, picks, order));
+            pointer_hits_writer.write(PointerHits::new(ray_id.pointer, picks, order));
         }
     }
 }
@@ -165,19 +167,19 @@ fn on_remove(mut world: DeferredWorld, HookContext { entity, .. }: HookContext) 
 }
 
 pub fn on_mesh_pick(
-    trigger: Trigger<Pointer<Pressed>>,
+    on_pointer_press: On<Pointer<Press>>,
     selected: Query<Entity, With<SelectedMesh>>,
     nonselected: Query<(Entity, &MeshMaterial3d<MatCap>), (With<Mesh3d>, Without<SelectedMesh>)>,
     input: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
 ) {
-    if trigger.button != PointerButton::Primary {
+    if on_pointer_press.button != PointerButton::Primary {
         return;
     }
 
     if !input.pressed(KeyCode::ShiftLeft) {
         for entity in selected {
-            if entity == trigger.target {
+            if entity == on_pointer_press.entity {
                 return;
             }
 
@@ -186,7 +188,7 @@ pub fn on_mesh_pick(
     }
 
     for (entity, matcap) in nonselected {
-        if entity == trigger.target {
+        if entity == on_pointer_press.entity {
             commands.entity(entity).insert(SelectedMesh {
                 original_matcap: matcap.0.clone(),
             });

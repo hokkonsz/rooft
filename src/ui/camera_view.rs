@@ -4,7 +4,7 @@ use crate::{
     color,
     ui::{
         BAR_SIZE,
-        left_panel::{LeftPanel, OnResizeLeftPanel},
+        left_panel::{LeftPanel, ResizeLeftPanel},
     },
 };
 use bevy::prelude::*;
@@ -180,10 +180,10 @@ fn hide_lock(mut lock: Single<&mut Visibility, With<CameraLockIcon>>) {
 pub struct ViewDisplay;
 
 fn on_resize_left_panel(
-    trigger: Trigger<OnResizeLeftPanel>,
+    on_resize_left_panel: On<ResizeLeftPanel>,
     mut display: Single<&mut Node, With<ViewDisplay>>,
 ) {
-    display.left = Val::Px(trigger.event().0 + BAR_SIZE + GAP)
+    display.left = Val::Px(on_resize_left_panel.event().0 + BAR_SIZE + GAP)
 }
 
 #[derive(Component)]
@@ -240,11 +240,11 @@ enum Dropdown {
 }
 
 fn view_transition(
-    mut state_events: EventReader<StateTransitionEvent<CameraView>>,
+    mut camera_view_reader: MessageReader<StateTransitionEvent<CameraView>>,
     mut header_text: Single<&mut Text, With<DropdownHeader>>,
     mut dropdown_next: ResMut<NextState<Dropdown>>,
 ) {
-    let Some(transition) = state_events.read().next() else {
+    let Some(transition) = camera_view_reader.read().next() else {
         return;
     };
 

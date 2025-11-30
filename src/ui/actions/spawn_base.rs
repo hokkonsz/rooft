@@ -41,7 +41,7 @@ fn show(mut commands: Commands, assets: Res<AppAssets>) {
                 ..default()
             },
             BackgroundColor(color::BLACK34),
-            BorderColor(color::BLACK34),
+            BorderColor::all(color::BLACK34),
             BorderRadius::all(Val::Px(10.)),
         ))
         .with_children(|panel| {
@@ -110,7 +110,7 @@ fn buttons(
         match interaction {
             Interaction::Pressed => {
                 *bg = BackgroundColor(color::BLACK44);
-                *bc = BorderColor(color::BLACK44);
+                *bc = BorderColor::all(color::BLACK44);
 
                 commands.trigger(OnSpawnBase(*shape));
                 action_que.next();
@@ -119,11 +119,11 @@ fn buttons(
             }
             Interaction::Hovered => {
                 *bg = BackgroundColor(color::BLACK38);
-                *bc = BorderColor(color::BLACK38);
+                *bc = BorderColor::all(color::BLACK38);
             }
             Interaction::None => {
                 *bg = BackgroundColor(color::BLACK30);
-                *bc = BorderColor(color::BLACK30);
+                *bc = BorderColor::all(color::BLACK30);
             }
         }
     }

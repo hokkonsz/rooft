@@ -29,7 +29,7 @@ pub fn button(
             ..default()
         },
         BackgroundColor(color::BLACK28),
-        BorderColor(color::BLACK28),
+        BorderColor::all(color::BLACK28),
         BorderRadius::all(Val::Px(5.)),
         Children::spawn_one((
             Node {
@@ -66,7 +66,7 @@ pub fn button_simple<T: Into<String>>(
             ..default()
         },
         BackgroundColor(color::BLACK28),
-        BorderColor(color::BLACK28),
+        BorderColor::all(color::BLACK28),
         BorderRadius::all(Val::Px(5.)),
         Children::spawn_one((
             Text::from(text.into()),
@@ -90,11 +90,11 @@ pub fn button_simple<T: Into<String>>(
 //         Interaction::Pressed => on_press(),
 //         Interaction::Hovered => {
 //             *background_color = BackgroundColor(color::BLACK44);
-//             *border_color = BorderColor(color::BLACK44);
+//             *border_color = BorderColor::all(color::BLACK44);
 //         }
 //         Interaction::None => {
 //             *background_color = BackgroundColor(color::BLACK30);
-//             *border_color = BorderColor(color::BLACK30);
+//             *border_color = BorderColor::all(color::BLACK30);
 //         }
 //     }
 // }
@@ -144,7 +144,7 @@ pub fn elem<T: Into<String>>(text: T, font: Handle<Font>, background_color: Colo
             ..default()
         },
         BackgroundColor(background_color),
-        BorderColor(background_color),
+        BorderColor::all(background_color),
         BorderRadius::all(Val::Px(LIST_ELEM_BORDER)),
         Children::spawn_one((
             Text::from(text.into()),
@@ -245,11 +245,11 @@ impl ChildSpawnerExt for ChildSpawnerCommands<'_> {
                 TextInputNode {
                     clear_on_submit: false,
                     mode: TextInputMode::SingleLine,
-                    filter: Some(TextInputFilter::Decimal),
                     max_chars: Some(20),
-                    justification: JustifyText::Center,
+                    justification: Justify::Center,
                     ..default()
                 },
+                TextInputFilter::Decimal,
                 TextInputStyle {
                     cursor_color: color::WHITE200,
                     selection_color: color::BLACK68,

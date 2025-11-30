@@ -33,7 +33,7 @@ fn setup(mut commands: Commands) {
                 ..default()
             },
             BackgroundColor(color::BLACK34),
-            BorderColor(color::BLACK30),
+            BorderColor::all(color::BLACK30),
         ))
         .with_children(|left_panel| {
             left_panel.spawn((
@@ -81,16 +81,16 @@ pub struct LeftPanelList;
 pub struct LeftPanelHandle;
 
 #[derive(Event)]
-pub struct OnShowLeftPanel;
+pub struct ShowLeftPanel;
 
 #[derive(Event)]
-pub struct OnHideLeftPanel;
+pub struct HideLeftPanel;
 
 #[derive(Event)]
-pub struct OnResizeLeftPanel(pub f32);
+pub struct ResizeLeftPanel(pub f32);
 
 fn on_show(
-    _trigger: Trigger<OnShowLeftPanel>,
+    _on_show_left_panel: On<ShowLeftPanel>,
     panel: Single<(&Node, &mut Visibility), With<LeftPanel>>,
     mut commands: Commands,
 ) {
@@ -99,18 +99,18 @@ fn on_show(
     *visibility = Visibility::Inherited;
 
     if let Val::Px(width) = node.width {
-        commands.trigger(OnResizeLeftPanel(width));
+        commands.trigger(ResizeLeftPanel(width));
     }
 }
 
 fn on_hide(
-    _trigger: Trigger<OnHideLeftPanel>,
+    _on_hide_left_panel: On<HideLeftPanel>,
     mut visibility: Single<&mut Visibility, With<LeftPanel>>,
     mut commands: Commands,
 ) {
     **visibility = Visibility::Hidden;
 
-    commands.trigger(OnResizeLeftPanel(0.));
+    commands.trigger(ResizeLeftPanel(0.));
 }
 
 fn resize(
@@ -133,7 +133,7 @@ fn resize(
                 + LeftPanel::HANDLE_WIDTH;
 
             panel_node.width = Val::Px(new_width);
-            commands.trigger(OnResizeLeftPanel(new_width));
+            commands.trigger(ResizeLeftPanel(new_width));
         }
         Interaction::Hovered => {
             *ph_bg = BackgroundColor(color::BLACK44);
