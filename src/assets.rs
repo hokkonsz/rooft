@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::materials::MatCap;
+use crate::materials::{FlatColorMat, MatCap};
 
 pub fn plugin(app: &mut App) {
     app.init_resource::<AppAssets>()
@@ -13,6 +13,8 @@ fn load_assets(
     asset_server: Res<AssetServer>,
     mut app_assets: ResMut<AppAssets>,
     mut matcaps: ResMut<Assets<MatCap>>,
+    mut flat_colors: ResMut<Assets<FlatColorMat>>,
+    mut meshes: ResMut<Assets<Mesh>>,
 ) {
     app_assets.fonts.iosevka = IosevkaFont {
         regular: asset_server.load("fonts/Iosevka-Regular.ttf"),
@@ -47,6 +49,50 @@ fn load_assets(
             alpha_mode: AlphaMode::default(),
         }),
     };
+
+    app_assets.materials.flat_colors = FlatColorMatAssets {
+        red: flat_colors.add(FlatColorMat {
+            color: LinearRgba::new(1., 0., 0., 1.),
+        }),
+        green: flat_colors.add(FlatColorMat {
+            color: LinearRgba::new(0., 1., 0., 1.),
+        }),
+        blue: flat_colors.add(FlatColorMat {
+            color: LinearRgba::new(0., 0., 1., 1.),
+        }),
+        orange: flat_colors.add(FlatColorMat {
+            color: LinearRgba::new(1., 0.5, 0., 1.),
+        }),
+        dark_red: flat_colors.add(FlatColorMat {
+            color: LinearRgba::new(0.5, 0., 0., 1.),
+        }),
+        dark_green: flat_colors.add(FlatColorMat {
+            color: LinearRgba::new(0., 0.5, 0., 1.),
+        }),
+        dark_blue: flat_colors.add(FlatColorMat {
+            color: LinearRgba::new(0., 0., 0.5, 1.),
+        }),
+        dark_orange: flat_colors.add(FlatColorMat {
+            color: LinearRgba::new(0.5, 0.25, 0., 1.),
+        }),
+        light_red: flat_colors.add(FlatColorMat {
+            color: LinearRgba::new(1., 0.25, 0.25, 1.),
+        }),
+        light_green: flat_colors.add(FlatColorMat {
+            color: LinearRgba::new(0.25, 1., 0.25, 1.),
+        }),
+        light_blue: flat_colors.add(FlatColorMat {
+            color: LinearRgba::new(0.25, 0.25, 1.0, 1.),
+        }),
+        light_orange: flat_colors.add(FlatColorMat {
+            color: LinearRgba::new(1., 0.75, 0.25, 1.),
+        }),
+    };
+
+    app_assets.meshes = MeshAssets {
+        sphere_r100: meshes.add(Sphere::new(100.).mesh().ico(8).unwrap()),
+        cylinder_r12: meshes.add(Cylinder::new(12., 350.).mesh().segments(8)),
+    }
 }
 
 #[derive(Default, Resource)]
@@ -55,6 +101,7 @@ pub struct AppAssets {
     pub icons: IconsAssets,
     pub images: ImageAssets,
     pub materials: MaterialAssets,
+    pub meshes: MeshAssets,
 }
 
 #[derive(Default)]
@@ -91,10 +138,33 @@ pub struct ImageAssets {
 #[derive(Default)]
 pub struct MaterialAssets {
     pub matcaps: MatCapAssets,
+    pub flat_colors: FlatColorMatAssets,
 }
 
 #[derive(Default)]
 pub struct MatCapAssets {
     pub gray: Handle<MatCap>,
     pub blue: Handle<MatCap>,
+}
+
+#[derive(Default)]
+pub struct FlatColorMatAssets {
+    pub red: Handle<FlatColorMat>,
+    pub green: Handle<FlatColorMat>,
+    pub blue: Handle<FlatColorMat>,
+    pub orange: Handle<FlatColorMat>,
+    pub dark_red: Handle<FlatColorMat>,
+    pub dark_green: Handle<FlatColorMat>,
+    pub dark_blue: Handle<FlatColorMat>,
+    pub dark_orange: Handle<FlatColorMat>,
+    pub light_red: Handle<FlatColorMat>,
+    pub light_green: Handle<FlatColorMat>,
+    pub light_blue: Handle<FlatColorMat>,
+    pub light_orange: Handle<FlatColorMat>,
+}
+
+#[derive(Default)]
+pub struct MeshAssets {
+    pub sphere_r100: Handle<Mesh>,
+    pub cylinder_r12: Handle<Mesh>,
 }
