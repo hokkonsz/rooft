@@ -1,3 +1,5 @@
+pub mod spawn_base;
+
 use std::collections::VecDeque;
 
 use bevy::prelude::*;
@@ -6,6 +8,7 @@ pub fn plugin(app: &mut App) {
     app.init_state::<ActionState>()
         .add_systems(Startup, setup)
 		.add_systems(Update, update)
+		.add_plugins(spawn_base::plugin)
 		// ..
 		;
 }
@@ -14,6 +17,7 @@ fn setup(mut commands: Commands) {
     let mut que = ActionQue::new();
 
     que.add(ActionState::SpawnBase);
+    que.add(ActionState::EditBase);
 
     commands.insert_resource(que);
 }
@@ -57,6 +61,6 @@ fn update(action_que: Res<ActionQue>, mut next_state: ResMut<NextState<ActionSta
 pub enum ActionState {
     #[default]
     None,
-
     SpawnBase,
+    EditBase,
 }

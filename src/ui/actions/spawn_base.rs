@@ -3,9 +3,9 @@ use bevy::prelude::*;
 use crate::{
     assets::AppAssets,
     color,
-    core::{
-        actions::{ActionQue, ActionState},
-        base::{BaseShape, OnSpawnBase},
+    core::actions::{
+        ActionQue, ActionState,
+        spawn_base::{BaseShape, SpawnBase},
     },
     ui::{BAR_SIZE, bundles::button, left_panel::LeftPanel},
 };
@@ -112,7 +112,7 @@ fn buttons(
                 *bg = BackgroundColor(color::BLACK44);
                 *bc = BorderColor::all(color::BLACK44);
 
-                commands.trigger(OnSpawnBase(*shape));
+                commands.trigger(SpawnBase(*shape));
                 action_que.next();
 
                 break;
@@ -122,8 +122,8 @@ fn buttons(
                 *bc = BorderColor::all(color::BLACK38);
             }
             Interaction::None => {
-                *bg = BackgroundColor(color::BLACK30);
-                *bc = BorderColor::all(color::BLACK30);
+                *bg = BackgroundColor(color::BLACK28);
+                *bc = BorderColor::all(color::BLACK28);
             }
         }
     }
