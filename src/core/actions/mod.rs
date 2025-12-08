@@ -1,3 +1,4 @@
+pub mod edit_base;
 pub mod spawn_base;
 
 use std::collections::VecDeque;
@@ -9,6 +10,7 @@ pub fn plugin(app: &mut App) {
         .add_systems(Startup, setup)
 		.add_systems(Update, update)
 		.add_plugins(spawn_base::plugin)
+        .add_plugins(edit_base::plugin)
 		// ..
 		;
 }

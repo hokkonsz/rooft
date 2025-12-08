@@ -4,6 +4,8 @@ use bevy::{
     prelude::*,
 };
 
+use crate::core::Axis3d;
+
 const VERTEX_PER_NODE: u32 = 6;
 const INDEX_PER_TRIANGLE: usize = 3;
 
@@ -177,6 +179,19 @@ impl Base {
     /// Returns a reference to the [Node] under the given index
     pub(super) fn node(&self, index: usize) -> &Node {
         &self.nodes[index]
+    }
+
+    /// Returns the position of the [Node] under the given index, on the provided
+    /// axis
+    ///
+    /// In case [Axis3d::Y] is provided, 0 is returned, as the [NodeList] is
+    /// only 2 dimensional.
+    pub(super) fn position(&self, index: usize, axis: Axis3d) -> f32 {
+        match axis {
+            Axis3d::X => self.nodes[index].position.x,
+            Axis3d::Y => 0.,
+            Axis3d::Z => self.nodes[index].position.z,
+        }
     }
 
     /// Returns a mutable refence to the [Node]'s x position under the given index
@@ -944,6 +959,8 @@ pub struct Node {
 }
 
 impl Node {
+    pub const MIN: f32 = -1_000_000.;
+    pub const MAX: f32 = 1_000_000.;
     pub const MIN_DISTANCE: f32 = 300.;
 
     /// Creates a new [Node] at the given [Position], with [Turn::Undefined]

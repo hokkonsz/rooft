@@ -1,5 +1,6 @@
 pub mod actions;
 pub mod base;
+pub mod inputs;
 pub mod picking;
 
 use bevy::prelude::*;
@@ -16,4 +17,11 @@ pub fn plugin(app: &mut App) {
 #[derive(Default, Resource)]
 pub struct ElementList {
     pub list: Vec<(Entity, String)>,
+}
+
+#[derive(PartialEq, Eq, Copy, Clone)]
+pub enum Axis3d {
+    X,
+    Y,
+    Z,
 }

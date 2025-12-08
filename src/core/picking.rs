@@ -14,6 +14,8 @@ use bevy::picking::mesh_picking::ray_cast::{
     MeshRayCast, MeshRayCastSettings, RayCastVisibility, SimplifiedMesh,
 };
 
+use crate::core::Axis3d;
+
 pub fn plugin(app: &mut App) {
     app.register_type::<SimplifiedMesh>()
         .add_systems(PreUpdate, update_hits.in_set(PickingSystems::Backend));
@@ -71,4 +73,5 @@ fn update_hits(
 #[derive(Component, PartialEq, Eq)]
 pub enum Pickable {
     Node,
+    NodeAxis(Axis3d),
 }
