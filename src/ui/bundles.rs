@@ -62,12 +62,12 @@ pub fn button_simple<T: Into<String>>(
             justify_content: JustifyContent::Center,
             flex_direction: FlexDirection::Row,
             flex_shrink: 0.,
-            border: UiRect::all(Val::Px(10.)),
+            border: UiRect::all(Val::Px(LIST_ELEM_BORDER)),
             ..default()
         },
         BackgroundColor(color::BLACK28),
         BorderColor::all(color::BLACK28),
-        BorderRadius::all(Val::Px(5.)),
+        BorderRadius::all(Val::Px(LIST_ELEM_BORDER)),
         Children::spawn_one((
             Text::from(text.into()),
             TextFont {
