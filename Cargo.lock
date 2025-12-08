@@ -3931,6 +3931,7 @@ dependencies = [
  "bevy",
  "bevy_ui_text_input",
  "log",
+ "smol_str",
  "tracing",
 ]
 

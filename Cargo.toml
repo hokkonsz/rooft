@@ -8,6 +8,7 @@ repository = "https://github.com/hokkonsz/rooft"
 [dependencies]
 bevy_ui_text_input = { version = "0.6.0" }
 bevy = { version = "0.17.3" }
+smol_str = { version = "0.2.2" }
 # Set max log levels. This helps avoid unwanted low-severity log spam, which can affect performance.
 log = { version = "0.4.28", features = [
     "max_level_debug",
