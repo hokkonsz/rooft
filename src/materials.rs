@@ -1,5 +1,9 @@
 use bevy::{
-    prelude::*, reflect::TypePath, render::render_resource::AsBindGroup, shader::ShaderRef,
+    ecs::{lifecycle::HookContext, world::DeferredWorld},
+    prelude::*,
+    reflect::TypePath,
+    render::render_resource::AsBindGroup,
+    shader::ShaderRef,
 };
 
 pub fn plugin(app: &mut App) {
@@ -41,4 +45,63 @@ impl Material for FlatColorMat {
     fn fragment_shader() -> ShaderRef {
         "shaders/flat_color.wgsl".into()
     }
+}
+
+#[derive(Debug, Clone)]
+pub enum MeshMaterial {
+    Standard(Handle<StandardMaterial>),
+    MatCap(Handle<MatCap>),
+    FlatColor(Handle<FlatColorMat>),
+}
+
+#[derive(Debug, Component)]
+#[component(on_add = on_add)]
+pub struct ChangeMaterial(MeshMaterial);
+
+impl ChangeMaterial {
+    pub fn standard(handle: Handle<StandardMaterial>) -> Self {
+        Self(MeshMaterial::Standard(handle))
+    }
+
+    pub fn mat_cap(handle: Handle<MatCap>) -> Self {
+        Self(MeshMaterial::MatCap(handle))
+    }
+
+    pub fn flat_color(handle: Handle<FlatColorMat>) -> Self {
+        Self(MeshMaterial::FlatColor(handle))
+    }
+}
+
+fn on_add(mut world: DeferredWorld, HookContext { entity, .. }: HookContext) {
+    // Remove old materials
+    world.commands().entity(entity).remove::<(
+        MeshMaterial3d<StandardMaterial>,
+        MeshMaterial3d<MatCap>,
+        MeshMaterial3d<FlatColorMat>,
+    )>();
+
+    // Add new material
+    match world.get::<ChangeMaterial>(entity).unwrap().0.clone() {
+        MeshMaterial::Standard(handle) => {
+            world
+                .commands()
+                .entity(entity)
+                .insert(MeshMaterial3d(handle));
+        }
+        MeshMaterial::MatCap(handle) => {
+            world
+                .commands()
+                .entity(entity)
+                .insert(MeshMaterial3d(handle));
+        }
+        MeshMaterial::FlatColor(handle) => {
+            world
+                .commands()
+                .entity(entity)
+                .insert(MeshMaterial3d(handle));
+        }
+    }
+
+    // Remove component
+    world.commands().entity(entity).remove::<ChangeMaterial>();
 }
