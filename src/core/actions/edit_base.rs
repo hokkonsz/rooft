@@ -5,7 +5,7 @@ use smol_str::SmolStr;
 
 use crate::{
     assets::AppAssets,
-    camera::{CameraLock, CameraView},
+    camera::{CameraLock, CameraTargetChanged, CameraView},
     color,
     core::{
         Axis3d,
@@ -22,29 +22,47 @@ const AXIS_HANDLE_OFFSET: f32 = 500.;
 pub fn plugin(app: &mut App) {
     app.init_state::<EditBaseState>()
         .init_resource::<EditBaseContext>()
-        // Action States
+        // ActionState::EditBase
         .add_systems(OnEnter(ActionState::EditBase), setup_scene)
-        .add_systems(Update, display_node_edges.run_if(in_state(ActionState::EditBase)))
-        .add_systems(OnExit(ActionState::EditBase), (update_base, cleanup_scene).chain())
-        // Edit Base States
+        .add_systems(
+            Update,
+            display_node_edges.run_if(in_state(ActionState::EditBase)),
+        )
+        .add_systems(
+            OnExit(ActionState::EditBase),
+            (update_camera_target, update_base, cleanup_scene).chain(),
+        )
+        // EditBaseState::PickingNode
         .add_systems(OnEnter(EditBaseState::PickingNode), enter_picking_node)
-        .add_systems(Update, (picking_node, transition_picking_node)
-                            .chain()
-                            .run_if(in_state(EditBaseState::PickingNode)))
-
+        .add_systems(
+            Update,
+            (picking_node, transition_picking_node)
+                .chain()
+                .run_if(in_state(EditBaseState::PickingNode)),
+        )
+        // EditBaseState::PickingAxis
         .add_systems(OnEnter(EditBaseState::PickingAxis), enter_picking_axis)
-        .add_systems(Update, (picking_axis, transition_picking_axis)
-                            .chain()
-                            .run_if(in_state(EditBaseState::PickingAxis)))
-
+        .add_systems(
+            Update,
+            (picking_axis, transition_picking_axis)
+                .chain()
+                .run_if(in_state(EditBaseState::PickingAxis)),
+        )
+        // EditBaseState::Reposition
         .add_systems(OnEnter(EditBaseState::Reposition), enter_reposition)
-        .add_systems(Update, (reposition_with_mouse, reposition_with_keyboard,
-                            reposition_check, reposition_node, transition_reposition)
-                            .chain()
-                            .run_if(in_state(EditBaseState::Reposition)))
-        .add_systems(OnExit(EditBaseState::Reposition), exit_reposition)
-        // ..
-        ;
+        .add_systems(
+            Update,
+            (
+                reposition_with_mouse,
+                reposition_with_keyboard,
+                reposition_check,
+                reposition_node,
+                transition_reposition,
+            )
+                .chain()
+                .run_if(in_state(EditBaseState::Reposition)),
+        )
+        .add_systems(OnExit(EditBaseState::Reposition), exit_reposition);
 }
 
 fn setup_scene(
@@ -126,6 +144,33 @@ fn setup_scene(
 
 fn update_base(mut base: ResMut<Base>, meshes: ResMut<Assets<Mesh>>) {
     base.update(meshes);
+}
+
+fn update_camera_target(mut commands: Commands, base: Res<Base>) {
+    let (mut min_x, mut min_z) = (f32::MAX, f32::MAX);
+    let (mut max_x, mut max_z) = (f32::MIN, f32::MIN);
+
+    for node in base.nodes().iter() {
+        if node.x() < min_x {
+            min_x = node.x();
+        }
+
+        if node.z() < min_z {
+            min_z = node.z()
+        }
+
+        if node.x() > max_x {
+            max_x = node.x()
+        }
+
+        if node.z() > max_z {
+            max_z = node.z()
+        }
+    }
+
+    let origo = Vec3::new((max_x + min_x) / 2., 0., (max_z + min_z) / 2.);
+
+    commands.trigger(CameraTargetChanged(origo));
 }
 
 fn cleanup_scene(

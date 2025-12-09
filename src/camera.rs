@@ -7,12 +7,15 @@ use bevy::{
 
 use crate::color;
 
+pub const CAMERA_TARGET_OFFSET: Vec3 = Vec3::new(-3500., 0., -500.);
+
 pub fn plugin(app: &mut App) {
     app.insert_resource(ClearColor(color::BLACK18))
         .init_state::<CameraView>()
         .init_state::<CameraLock>()
         .add_systems(Startup, setup)
         .add_systems(Update, (rotate, zoom, view_transition))
+        .add_observer(on_camera_target_changed)
         // ..
         ;
 }
@@ -34,6 +37,7 @@ fn setup(mut commands: Commands) {
 
 #[derive(Debug, Resource)]
 struct CameraSettings {
+    pub target: Vec3,
     pub orbit_distance_min: f32,
     pub orbit_distance_max: f32,
     pub orbit_distance: f32,
@@ -46,6 +50,7 @@ struct CameraSettings {
 impl Default for CameraSettings {
     fn default() -> Self {
         Self {
+            target: CAMERA_TARGET_OFFSET,
             orbit_distance_min: 0.,
             orbit_distance_max: 30000.,
             orbit_distance: 5000.,
@@ -89,7 +94,7 @@ fn rotate(
     let yaw = yaw + delta_yaw;
     camera.rotation = Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.);
 
-    camera.translation = Vec3::ZERO - camera.forward() * settings.orbit_distance;
+    camera.translation = settings.target - camera.forward() * settings.orbit_distance;
 }
 
 fn zoom(
@@ -97,14 +102,14 @@ fn zoom(
     mut settings: ResMut<CameraSettings>,
     mouse_wheel: Res<AccumulatedMouseScroll>,
 ) {
-    if mouse_wheel.delta.y.abs() == 0.0 {
+    if mouse_wheel.delta.y.abs() == 0. {
         return;
     }
 
     settings.orbit_distance = (settings.orbit_distance + mouse_wheel.delta.y * -settings.zoom_step)
         .clamp(settings.orbit_distance_min, settings.orbit_distance_max);
 
-    camera.translation = Vec3::ZERO - camera.forward() * settings.orbit_distance;
+    camera.translation = settings.target - camera.forward() * settings.orbit_distance;
 }
 
 fn view_transition(
@@ -129,7 +134,19 @@ fn view_transition(
         CameraView::Back => camera.rotation = Quat::from_xyzw(0., 1., 0., 0.),
     }
 
-    camera.translation = Vec3::ZERO - camera.forward() * settings.orbit_distance;
+    camera.translation = settings.target - camera.forward() * settings.orbit_distance;
+}
+
+#[derive(Event)]
+pub struct CameraTargetChanged(pub Vec3);
+
+fn on_camera_target_changed(
+    on_camera_target_changed: On<CameraTargetChanged>,
+    mut camera: Single<&mut Transform, With<Camera>>,
+    mut settings: ResMut<CameraSettings>,
+) {
+    settings.target = on_camera_target_changed.0 + CAMERA_TARGET_OFFSET;
+    camera.translation = settings.target - camera.forward() * settings.orbit_distance;
 }
 
 #[derive(Component, Debug, Default, States, Hash, PartialEq, Eq, Clone)]
