@@ -150,11 +150,11 @@ fn view_transition(
 
     match new_view {
         CameraView::Free => return,
-        CameraView::Top => transform.rotation = Quat::from_xyzw(-0.70356244, 0., 0., 0.71063346),
-        CameraView::Left => transform.rotation = Quat::from_xyzw(0., -0.70710677, 0., 0.70710677),
-        CameraView::Right => transform.rotation = Quat::from_xyzw(0., 0.70710677, 0., 0.70710677),
-        CameraView::Front => transform.rotation = Quat::from_xyzw(0., 0., 0., 1.),
-        CameraView::Back => transform.rotation = Quat::from_xyzw(0., 1., 0., 0.),
+        CameraView::Top => transform.rotation = CameraView::TOP,
+        CameraView::Left => transform.rotation = CameraView::LEFT,
+        CameraView::Right => transform.rotation = CameraView::RIGHT,
+        CameraView::Front => transform.rotation = CameraView::FRONT,
+        CameraView::Back => transform.rotation = CameraView::BACK,
     }
 
     transform.translation = settings.target - transform.forward() * settings.orbit_distance;
@@ -200,6 +200,12 @@ impl CameraView {
         CameraView::Front,
         CameraView::Back,
     ];
+
+    const TOP: Quat = Quat::from_xyzw(-0.70356244, 0., 0., 0.71063346);
+    const LEFT: Quat = Quat::from_xyzw(0., -0.70710677, 0., 0.70710677);
+    const RIGHT: Quat = Quat::from_xyzw(0., 0.70710677, 0., 0.70710677);
+    const FRONT: Quat = Quat::from_xyzw(0., 0., 0., 1.);
+    const BACK: Quat = Quat::from_xyzw(0., 1., 0., 0.);
 }
 
 impl ToString for CameraView {
