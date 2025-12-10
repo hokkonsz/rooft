@@ -8,6 +8,7 @@ use bevy::{
 use crate::color;
 
 pub const CAMERA_TARGET_OFFSET: Vec3 = Vec3::new(-3500., 0., -500.);
+const SCALE_FACTOR: f32 = 1000.;
 
 pub fn plugin(app: &mut App) {
     app.insert_resource(ClearColor(color::BLACK18))
@@ -52,7 +53,7 @@ impl Default for CameraSettings {
         Self {
             target: CAMERA_TARGET_OFFSET,
             orbit_distance_min: 0.,
-            orbit_distance_max: 30000.,
+            orbit_distance_max: 100000.,
             orbit_distance: 5000.,
             zoom_step: 500.,
             pitch_limit: FRAC_PI_2 - 0.01,
@@ -64,12 +65,12 @@ impl Default for CameraSettings {
 
 fn rotate(
     mut camera: Single<&mut Transform, With<Camera>>,
-    camera_view_curr: Res<State<CameraView>>,
     mut camera_view_next: ResMut<NextState<CameraView>>,
-    camera_lock: Res<State<CameraLock>>,
     settings: Res<CameraSettings>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     mouse_motion: Res<AccumulatedMouseMotion>,
+    camera_view_curr: Res<State<CameraView>>,
+    camera_lock: Res<State<CameraLock>>,
     time: Res<Time>,
 ) {
     if *camera_lock == CameraLock::Locked {
@@ -98,7 +99,7 @@ fn rotate(
 }
 
 fn zoom(
-    mut camera: Single<&mut Transform, With<Camera>>,
+    camera: Single<(&mut Projection, &mut Transform), With<Camera>>,
     mut settings: ResMut<CameraSettings>,
     mouse_wheel: Res<AccumulatedMouseScroll>,
 ) {
@@ -106,15 +107,24 @@ fn zoom(
         return;
     }
 
+    let (mut projection, mut transform) = camera.into_inner();
+
+    match projection.as_mut() {
+        Projection::Orthographic(projection) => {
+            projection.scale = settings.orbit_distance / SCALE_FACTOR;
+        }
+        _ => (),
+    }
+
     settings.orbit_distance = (settings.orbit_distance + mouse_wheel.delta.y * -settings.zoom_step)
         .clamp(settings.orbit_distance_min, settings.orbit_distance_max);
 
-    camera.translation = settings.target - camera.forward() * settings.orbit_distance;
+    transform.translation = settings.target - transform.forward() * settings.orbit_distance;
 }
 
 fn view_transition(
     mut camera_view_reader: MessageReader<StateTransitionEvent<CameraView>>,
-    mut camera: Single<&mut Transform, With<Camera>>,
+    camera: Single<(&mut Projection, &mut Transform), With<Camera>>,
     settings: Res<CameraSettings>,
 ) {
     let Some(transition) = camera_view_reader.read().next() else {
@@ -125,16 +135,29 @@ fn view_transition(
         return;
     };
 
-    match new_view {
-        CameraView::Free => return,
-        CameraView::Top => camera.rotation = Quat::from_xyzw(-0.70356244, 0., 0., 0.71063346),
-        CameraView::Left => camera.rotation = Quat::from_xyzw(0., -0.70710677, 0., 0.70710677),
-        CameraView::Right => camera.rotation = Quat::from_xyzw(0., 0.70710677, 0., 0.70710677),
-        CameraView::Front => camera.rotation = Quat::from_xyzw(0., 0., 0., 1.),
-        CameraView::Back => camera.rotation = Quat::from_xyzw(0., 1., 0., 0.),
+    let (mut projection, mut transform) = camera.into_inner();
+
+    if *new_view == CameraView::Free {
+        *projection = Projection::Perspective(PerspectiveProjection::default());
+    } else {
+        *projection = Projection::Orthographic(OrthographicProjection {
+            far: 1000000.,
+            near: -1000000.,
+            scale: settings.orbit_distance / SCALE_FACTOR,
+            ..OrthographicProjection::default_3d()
+        });
     }
 
-    camera.translation = settings.target - camera.forward() * settings.orbit_distance;
+    match new_view {
+        CameraView::Free => return,
+        CameraView::Top => transform.rotation = Quat::from_xyzw(-0.70356244, 0., 0., 0.71063346),
+        CameraView::Left => transform.rotation = Quat::from_xyzw(0., -0.70710677, 0., 0.70710677),
+        CameraView::Right => transform.rotation = Quat::from_xyzw(0., 0.70710677, 0., 0.70710677),
+        CameraView::Front => transform.rotation = Quat::from_xyzw(0., 0., 0., 1.),
+        CameraView::Back => transform.rotation = Quat::from_xyzw(0., 1., 0., 0.),
+    }
+
+    transform.translation = settings.target - transform.forward() * settings.orbit_distance;
 }
 
 #[derive(Event)]
